@@ -29,7 +29,7 @@ def fasta_to_clustalo(in_file, out_file):
 	cmd = 'clustalo -i ' + in_file + ' -o ' + out_file + ' --force -v'
 	os.system(cmd)
 
-def clustalo_output_to_list(out_file):
+def fasta_to_list(out_file):
 	sequences = []
 	name_list = []
 
@@ -103,27 +103,71 @@ def remove_dashes(fasta_file_from, fasta_file_to):
 		for line in fin:
 			fout.write(line.translate(str.maketrans('', '', '-')))
 
+def consensus_sequence(sequences):
+	consensus_seq = ''
+	pm = profile_matrix(sequences, 1)
+	sequence_length = len(sequences[0])
+	for i in range(sequence_length):
+		l = []
+		for aa in pm:
+			l.append(pm[aa][i])
+		index = l.index(max(l))
+		consensus_seq += aa[index]
+
+	return consensus_seq
+
+
 def main():
-	cut_off = 500
+	'''
+	cut_off = 2800
 	gzfile = 'PF00167_full_length_sequences.fasta.gz'
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
 	gzip_to_fasta(gzfile, write_file)
 	fasta_to_clustalo(write_file, out_file)
-	sequences, name_list = clustalo_output_to_list(out_file)
-	print(len(sequences), '###########################')
+	sequences, name_list = fasta_to_list(out_file)
+	#print(len(sequences), '###########################')
 	pm = profile_matrix(sequences, 1)
 	bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 	sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
 	list_to_fasta(sequences, name_list, 'test.fasta')
 	remove_dashes('test.fasta', write_file)
 	fasta_to_clustalo(write_file, out_file)
-	sequences, name_list = clustalo_output_to_list(out_file)
+	sequences, name_list = fasta_to_list(out_file)
 	print(len(sequences), '###########################')
 	pm = profile_matrix(sequences, 1)
 	bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 	sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
 	print(len(sequences), '###########################')
+
+	'''
+	cut_off = 3200
+	gzfile = 'PF00167_full_length_sequences.fasta.gz'
+	write_file = 'write.fasta'
+	out_file = 'output.fasta'
+	gzip_to_fasta(gzfile, write_file)
+
+	seq, names = fasta_to_list(write_file)
+	num = len(seq)
+	iteration = 1
+	pm = {}
+
+
+	while num > cut_off:
+		print("ITERATION NUMBER " + str(iteration) + '#'*100)
+		fasta_to_clustalo(write_file, out_file)
+		sequences, name_list = fasta_to_list(out_file)
+
+		pm = profile_matrix(sequences, 1)
+		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
+		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+		list_to_fasta(sequences, name_list, 'temp.fasta')
+		remove_dashes('temp.fasta', write_file)
+		num = len(sequences)
+		iteration += 1
+
+	print(consensus_sequence(sequences))
+
 
 if __name__ == '__main__':
     main()
