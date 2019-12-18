@@ -112,35 +112,12 @@ def consensus_sequence(sequences):
 		for aa in pm:
 			l.append(pm[aa][i])
 		index = l.index(max(l))
-		consensus_seq += aa[index]
+		consensus_seq += amino_acids[index]
 
 	return consensus_seq
 
-
 def main():
-	'''
-	cut_off = 2800
-	gzfile = 'PF00167_full_length_sequences.fasta.gz'
-	write_file = 'write.fasta'
-	out_file = 'output.fasta'
-	gzip_to_fasta(gzfile, write_file)
-	fasta_to_clustalo(write_file, out_file)
-	sequences, name_list = fasta_to_list(out_file)
-	#print(len(sequences), '###########################')
-	pm = profile_matrix(sequences, 1)
-	bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-	sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-	list_to_fasta(sequences, name_list, 'test.fasta')
-	remove_dashes('test.fasta', write_file)
-	fasta_to_clustalo(write_file, out_file)
-	sequences, name_list = fasta_to_list(out_file)
-	print(len(sequences), '###########################')
-	pm = profile_matrix(sequences, 1)
-	bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-	sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-	print(len(sequences), '###########################')
-
-	'''
+	
 	cut_off = 3200
 	gzfile = 'PF00167_full_length_sequences.fasta.gz'
 	write_file = 'write.fasta'
@@ -151,7 +128,6 @@ def main():
 	num = len(seq)
 	iteration = 1
 	pm = {}
-
 
 	while num > cut_off:
 		print("ITERATION NUMBER " + str(iteration) + '#'*100)
@@ -166,8 +142,8 @@ def main():
 		num = len(sequences)
 		iteration += 1
 
+	
 	print(consensus_sequence(sequences))
-
 
 if __name__ == '__main__':
     main()
