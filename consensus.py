@@ -1,6 +1,8 @@
 import gzip
 import os
 from Bio import SeqIO
+import sys
+from collections import Counter
 
 amino_acids = 'ACDEFGHIKLMNPQRSTVWXY'
 amino_acids = list(amino_acids) + ['-']
@@ -112,12 +114,53 @@ def consensus_sequence(sequences):
 		for aa in pm:
 			l.append(pm[aa][i])
 		index = l.index(max(l))
+		if l[index] < 0.5:
+			index = l.index(second_largest(l))
+		else:
+			continue
+
 		consensus_seq += amino_acids[index]
 
 	return consensus_seq
 
+def sequence_length_list(read_file):
+	sequences, name_list = fasta_to_list(read_file)
+	sequence_lengths = []
+	print(len(sequences))
+	for seq in sequences:
+		sequence_lengths.append(len(seq))
+	return sequence_lengths
+
+def mode_of_list(sequence_lengths):
+	n = len(sequence_lengths)
+	data = Counter(sequence_lengths) 
+	get_mode = dict(data) 
+	mode = [k for k, v in get_mode.items() if v == max(list(data.values()))]
+	if n == len(mode):
+		return None
+	else:
+		return mode
+
+def median_of_list(sequence_lengths):
+	n = len(sequence_lengths) 
+	sequence_lengths.sort() 
+	if n % 2 == 0:
+		median1 = sequence_lengths[n//2]
+		median2 = sequence_lengths[n//2 - 1] 
+		median = (median1 + median2)/2
+	else:
+		median = sequence_lengths[n//2] 
+
+	return median
+
+def mean_of_list(sequence_lengths):
+	n = len(sequence_lengths) 
+	get_sum = sum(sequence_lengths)
+	mean = get_sum / n
+	return mean
+
 def main():
-	
+	'''
 	cut_off = 3200
 	gzfile = 'PF00167_full_length_sequences.fasta.gz'
 	write_file = 'write.fasta'
@@ -133,7 +176,6 @@ def main():
 		print("ITERATION NUMBER " + str(iteration) + '#'*100)
 		fasta_to_clustalo(write_file, out_file)
 		sequences, name_list = fasta_to_list(out_file)
-
 		pm = profile_matrix(sequences, 1)
 		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
@@ -142,8 +184,12 @@ def main():
 		num = len(sequences)
 		iteration += 1
 
-	
 	print(consensus_sequence(sequences))
+	'''
+	sequence_lengths = sequence_length_list('write.fasta')
+	print(mode_of_list(sequence_lengths))
+	print(median_of_list(sequence_lengths))
+	print(mean_of_list(sequence_lengths))
 
 if __name__ == '__main__':
     main()
