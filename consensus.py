@@ -124,7 +124,7 @@ def consensus_sequence(sequences):
 def sequence_length_list(read_file):
 	sequences, name_list = fasta_to_list(read_file)
 	sequence_lengths = []
-	print(len(sequences))
+	#print(len(sequences))
 	for seq in sequences:
 		sequence_lengths.append(len(seq))
 	return sequence_lengths
@@ -171,42 +171,42 @@ def cut_off(sequence_lengths):
 
 def main():
 
-	gzfile = 'PF00167_full_length_sequences.fasta.gz'
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
-	gzip_to_fasta(gzfile, write_file)
+	temp_file = 'temp.fasta'
 
-	#seq, names = fasta_to_list(write_file)
-	#num = len(seq)
-
+	remove_dashes(write_file, temp_file)
 	pm = {}
-	sequence_lengths = sequence_length_list(write_file)
+	sequence_lengths = sequence_length_list(temp_file)
 	flag = cut_off(sequence_lengths)
 
 	print('MODE | MEDIAN | MEAN' + '#'*100)
+
 	mode = mode_of_list(sequence_lengths)[0]
 	median = median_of_list(sequence_lengths)
 	mean = mean_of_list(sequence_lengths)
-	print(str(mode) + '|' + str(median) + '|' + str(mean))
 
+	print(str(mode) + '|' + str(median) + '|' + str(mean))
 	sequences = []
 	name_list = []
 	iteration = 1
 
-	while flag is False:
+	while True:
+
 		print("ITERATION NUMBER: " + str(iteration) + '#'*100)
 
-		fasta_to_clustalo(write_file, out_file)
+		fasta_to_clustalo(temp_file, out_file)
 
 		sequences, name_list = fasta_to_list(out_file)
 		pm = profile_matrix(sequences, 1)
 		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
 
-		list_to_fasta(sequences, name_list, 'temp.fasta')
-		remove_dashes('temp.fasta', write_file)
+		list_to_fasta(sequences, name_list, write_file)
+		remove_dashes(write_file, temp_file)
 
-		sequence_lengths = sequence_length_list(write_file)
+		sequence_lengths = sequence_length_list(temp_file)
+		
 		flag = cut_off(sequence_lengths)
 
 		print('MODE | MEDIAN | MEAN' + '#'*100)
@@ -214,10 +214,10 @@ def main():
 		median = median_of_list(sequence_lengths)
 		mean = mean_of_list(sequence_lengths)
 		print(str(mode) + '|' + str(median) + '|' + str(mean))
-
+		print(consensus_sequence(sequences))
 		print(len(consensus_sequence(sequences)), '$'*100)
+
 		iteration += 1
-	
 
 	print(consensus_sequence(sequences))
 
