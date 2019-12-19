@@ -7,6 +7,8 @@ from collections import Counter
 amino_acids = 'ACDEFGHIKLMNPQRSTVWXY'
 amino_acids = list(amino_acids) + ['-']
 
+FGF_consensus_pdb = 'MRLRRLYCRTGGFHLQILPDGRVDGTREDNSPYSLLEIRAVEVGVVAIKGVKSGRYLAMNKKGRLYGSKHFTDECKFKERLLENGYNTYSSAKYRRGWYVALNKNGRPKKGNRTRRTQKATHFLPLPVSG'
+
 def second_largest(numbers):
 	count = 0
 	m1 = m2 = float('-inf')
@@ -79,10 +81,6 @@ def find_bad_sequences(profile_matrix, sequences, name_list):
 				if i not in bad_sequence_numbers:
 					bad_sequence_numbers.append(i)
 
-	#bad_sequences = []
-	#for number in bad_sequence_numbers:
-	#		bad_sequences.append(name_list[number])
-
 	return bad_sequence_numbers
 
 def remove_bad_sequences(sequences, name_list, bad_sequence_numbers):
@@ -114,11 +112,11 @@ def consensus_sequence(sequences):
 		for aa in pm:
 			l.append(pm[aa][i])
 		index = l.index(max(l))
-		if l[index] < 0.5:
-			index = l.index(second_largest(l))
-		else:
-			continue
-
+		if amino_acids[index] == '-':
+			if l[index] < 0.5:
+				index = l.index(second_largest(l))
+			else:
+				continue
 		consensus_seq += amino_acids[index]
 
 	return consensus_seq
@@ -159,37 +157,69 @@ def mean_of_list(sequence_lengths):
 	mean = get_sum / n
 	return mean
 
+def cut_off(sequence_lengths):
+	mode = mode_of_list(sequence_lengths)[0]
+	high = mode*1.2
+	low = mode*0.8
+	flag = True
+	for length in sequence_lengths:
+		if length > high or length < low:
+			flag = False
+			break
+		
+	return flag
+
 def main():
-	'''
-	cut_off = 3200
+
 	gzfile = 'PF00167_full_length_sequences.fasta.gz'
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
 	gzip_to_fasta(gzfile, write_file)
 
-	seq, names = fasta_to_list(write_file)
-	num = len(seq)
-	iteration = 1
-	pm = {}
+	#seq, names = fasta_to_list(write_file)
+	#num = len(seq)
 
-	while num > cut_off:
-		print("ITERATION NUMBER " + str(iteration) + '#'*100)
+	pm = {}
+	sequence_lengths = sequence_length_list(write_file)
+	flag = cut_off(sequence_lengths)
+
+	print('MODE | MEDIAN | MEAN' + '#'*100)
+	mode = mode_of_list(sequence_lengths)[0]
+	median = median_of_list(sequence_lengths)
+	mean = mean_of_list(sequence_lengths)
+	print(str(mode) + '|' + str(median) + '|' + str(mean))
+
+	sequences = []
+	name_list = []
+	iteration = 1
+
+	while flag is False:
+		print("ITERATION NUMBER: " + str(iteration) + '#'*100)
+
 		fasta_to_clustalo(write_file, out_file)
+
 		sequences, name_list = fasta_to_list(out_file)
 		pm = profile_matrix(sequences, 1)
 		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+
 		list_to_fasta(sequences, name_list, 'temp.fasta')
 		remove_dashes('temp.fasta', write_file)
-		num = len(sequences)
+
+		sequence_lengths = sequence_length_list(write_file)
+		flag = cut_off(sequence_lengths)
+
+		print('MODE | MEDIAN | MEAN' + '#'*100)
+		mode = mode_of_list(sequence_lengths)[0]
+		median = median_of_list(sequence_lengths)
+		mean = mean_of_list(sequence_lengths)
+		print(str(mode) + '|' + str(median) + '|' + str(mean))
+
+		print(len(consensus_sequence(sequences)), '$'*100)
 		iteration += 1
+	
 
 	print(consensus_sequence(sequences))
-	'''
-	sequence_lengths = sequence_length_list('write.fasta')
-	print(mode_of_list(sequence_lengths))
-	print(median_of_list(sequence_lengths))
-	print(mean_of_list(sequence_lengths))
 
 if __name__ == '__main__':
     main()
