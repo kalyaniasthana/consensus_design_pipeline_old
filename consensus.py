@@ -69,7 +69,7 @@ def profile_matrix(sequences, pseudocount = 1):
 	return profile_matrix
 
 #finding index of bad sequence numbers in the sequence list
-def find_bad_sequences(profile_matrix, sequences, name_list):
+def find_bad_sequences(profile_matrix, sequences, name_list, mode):
 	max_value = max(profile_matrix['-'])
 	if max_value == 1:
 		max_value = second_largest(profile_matrix['-'])
@@ -86,14 +86,21 @@ def find_bad_sequences(profile_matrix, sequences, name_list):
 				if i not in bad_sequence_numbers:
 					bad_sequence_numbers.append(i)
 
-	return bad_sequence_numbers
+	bad_seq_numbers = []
+	low = 0.8*mode
+	high = 1.2*mode
+	for num in bad_sequence_numbers:
+		length = sequence_length_without_dashes(sequences[num])
+		if length < low or length > high:
+			bad_seq_numbers.append(num)
+
+	return bad_seq_numbers
 
 #removing bad sequence numbers and returning new sequence list and name list
 def remove_bad_sequences(sequences, name_list, bad_sequence_numbers):
 
-	bad_sequence_set = set(bad_sequence_numbers)
-	sequences = [x for i, x in enumerate(sequences) if i not in bad_sequence_set]
-	name_list = [x for i, x in enumerate(name_list) if i not in bad_sequence_set]
+	sequences = [x for i, x in enumerate(sequences) if i not in bad_sequence_numbers]
+	name_list = [x for i, x in enumerate(name_list) if i not in bad_sequence_numbers]
 
 	return sequences, name_list
 
@@ -183,6 +190,17 @@ def copy_file(in_file, out_file):
 	with open(in_file) as fin, open(out_file, 'w') as fout:
 		for line in fin:
 			fout.write(line)
+
+def sequence_length_without_dashes(sequence):
+	new_seq = ''
+	for i in range(len(sequence)):
+		if sequence[i] == '-':
+			continue
+		else:
+			new_seq += sequence[i]
+
+	return len(new_seq)
+
 '''
 def main():
 
@@ -244,25 +262,49 @@ def main():
 	#write_file is already aligned
 	out_file = 'output.fasta'
 	temp_file = 'temp.fasta'
+	bad_sequences = 'bad_sequences.fasta'
 
-	while True:
+	#find cut off
+	remove_dashes(write_file, temp_file)
+	sequence_lengths = sequence_length_list(temp_file)
+	mode = mode_of_list(sequence_lengths)[0]
+	flag = cut_off(sequence_lengths, mode)
+
+	print(flag, '%'*40)
+
+
+	iteration = 1
+
+	while flag is False:
+		print("ITERATION: " + str(iteration) + '*'*30)
 		#convert aligned write_file to list
 		sequences, name_list = fasta_to_list(write_file)
 		print(len(sequences), '#'*50)
 		#profile matrix 
 		pm = profile_matrix(sequences, 1)
 		#find bad sequence indices in sequences list
-		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
+		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list, mode)
+		#print length of bad sequences
+		lens = []
+		for num in bad_sequence_numbers:
+			lens.append(sequence_length_without_dashes(sequences[num]))
+		print(lens, '@'*35)
 		#remove bad sequences
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+		#write bad sequences to the bad_sequence file 
 		print(len(sequences), '$'*50)
 		#convert new/smaller sequence and name list to fasta file
+		print(consensus_sequence(sequences), 'CONSENSUS!!!!!')
 		list_to_fasta(sequences, name_list, temp_file)
 		#remove dashes to make file ready for new alignment
 		remove_dashes(temp_file, out_file)
-		#new alignment 
-		fasta_to_clustalo(out_file, write_file)
+		#find new cut off
+		sequence_lengths = sequence_length_list(out_file)
 
+		flag = cut_off(sequence_lengths, mode)
+		#new alignment
+		fasta_to_clustalo(out_file, write_file)
+		iteration += 1
 
 
 if __name__ == '__main__':
