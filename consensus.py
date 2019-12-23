@@ -4,6 +4,9 @@ from Bio import SeqIO
 import sys
 from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
+import time
+
+start = time.time()
 
 amino_acids = 'ACDEFGHIKLMNPQRSTVWXY'
 amino_acids = ['-'] + list(amino_acids)
@@ -248,14 +251,24 @@ def main():
 	fasta_to_clustalo(out_file, write_file)
 	
 	iteration = 1
+	#exit conditions
+	#if number of sequences < 100
+	#if length of alignment does not change in subsequent iterations
+	#if length of alignment becomes to small i.e -15 the desired length (mode length)
 
 	while True:
 		print("ITERATION: " + str(iteration) + '*'*30)
 		#convert aligned write_file to list
 		sequences, name_list = fasta_to_list(write_file)
+		number_of_sequences = len(sequences)
+		length_of_alignment = len(sequences[0])
+		print('LENGTH OF ALIGNMENT = ', length_of_alignment)
+		if number_of_sequences < 100 or length_of_alignment < mode - 15:
+			break
 		pm = profile_matrix(sequences)
 		#print(pm) #error here because these sequences are not aligned, FIX THIS
-		print(consensus_sequence(sequences), len(consensus_sequence(sequences)), 'CONSENSUS!!!!!')
+		cs = consensus_sequence(sequences)
+		print(cs, len(cs), 'CONSENSUS!!')
 		#profile matrix 
 		#pm = profile_matrix(sequences)
 		#find bad sequence indices in sequences list
@@ -273,7 +286,15 @@ def main():
 		#flag = consensus_length_cut_off(sequences, mode)
 		#new alignment
 		fasta_to_clustalo(out_file, write_file)
+		temp_seqs, temp_names = fasta_to_list(write_file)
+		loa = len(temp_seqs[0])
+		if loa == length_of_alignment:
+			break
 		iteration += 1
 
+	print('***********Final Consensus Sequence: ' + '\n')
+	print(cs)
+	end = time.time() - start
+	print('It took ' + str(end) + ' seconds to run the script' )
 if __name__ == '__main__':
     main()
