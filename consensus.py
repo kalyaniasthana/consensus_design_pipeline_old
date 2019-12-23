@@ -115,12 +115,16 @@ def consensus_sequence(sequences):
 		l = []
 		for aa in pm:
 			l.append(pm[aa][i])
-		index = l.index(max(l))
+		max_value = max(l)
+		indices = get_all_indices(l, max_value)
+		index = indices[0]
 		if amino_acids[index] == '-':
 			if l[index] < 0.5:
-				index = l.index(second_largest(l))
-				print('taking second largest value', amino_acids[index])
-				print(l)
+				second_largest_value = second_largest(l)
+				if second_largest_value == max_value:
+					index = indices[1]
+				else:
+					index = l.index(second_largest_value)
 			else:
 				continue
 		consensus_seq += amino_acids[index]
@@ -163,7 +167,7 @@ def mean_of_list(sequence_lengths):
 	get_sum = sum(sequence_lengths)
 	mean = get_sum / n
 	return mean
-
+'''
 #returns True only if all sequence length are within +/-20% of the initial mode length
 def cut_off(sequence_lengths, mode):
 	high = mode*1.2
@@ -180,7 +184,7 @@ def copy_file(in_file, out_file):
 	with open(in_file) as fin, open(out_file, 'w') as fout:
 		for line in fin:
 			fout.write(line)
-
+'''
 def sequence_length_without_dashes(sequence):
 	new_seq = ''
 	for i in range(len(sequence)):
@@ -190,7 +194,7 @@ def sequence_length_without_dashes(sequence):
 			new_seq += sequence[i]
 
 	return len(new_seq)
-
+'''
 def consensus_length_cut_off(sequences, mode):
 	flag = False
 	cs = len(consensus_sequence(sequences))
@@ -200,7 +204,7 @@ def consensus_length_cut_off(sequences, mode):
 		flag = True
 
 	return flag
-
+'''
 def selex_to_fasta(in_file, out_file):
 	with open(in_file) as fin, open(out_file, 'w') as fout:
 		headers = []
@@ -217,6 +221,10 @@ def check_fasta(file):
 	with open(file, "r") as handle:
 		fasta = SeqIO.parse(handle, "fasta")
 		return any(fasta)
+
+def get_all_indices(l, value):
+
+	return [i for i, val in enumerate(l) if val == value]
 
 def main():
 
