@@ -237,8 +237,10 @@ def main():
 	out_file = 'output.fasta'
 	temp_file = 'temp.fasta'
 	bad_sequences = 'bad_sequences.fasta'
-
-	selex_to_fasta('PF00167_full.txt', temp_file)
+	#pfam 30.0 FGF 
+	#selex_to_fasta('PF00167_full.txt', temp_file)
+	#pfam 32.0 FGF
+	selex_to_fasta('PF00167_latest.txt', temp_file)
 	remove_dashes(temp_file, write_file)
 	cdhit(write_file, out_file)
 
