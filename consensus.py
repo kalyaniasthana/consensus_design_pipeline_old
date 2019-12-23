@@ -13,6 +13,13 @@ amino_acids = ['-'] + list(amino_acids)
 
 FGF_consensus_pdb = 'MRLRRLYCRTGGFHLQILPDGRVDGTREDNSPYSLLEIRAVEVGVVAIKGVKSGRYLAMNKKGRLYGSKHFTDECKFKERLLENGYNTYSSAKYRRGWYVALNKNGRPKKGNRTRRTQKATHFLPLPVSG'
 
+def Nmaxelements(input_list, N): 
+	final_list = []
+	input_list.sort(reverse = True)
+	for i in range(N):
+		final_list.append(input_list[i])
+	return final_list
+
 #finding second largest number in a list
 def second_largest(numbers):
 	count = 0
@@ -67,6 +74,7 @@ def profile_matrix(sequences):
 #finding index of bad sequence numbers in the sequence list
 def find_bad_sequences(profile_matrix, sequences, name_list):
 	max_value = max(profile_matrix['-'])
+
 	if max_value == 1:
 		max_value = second_largest(profile_matrix['-'])
 
@@ -231,7 +239,7 @@ def get_all_indices(l, value):
 
 def main():
 
-	#0th iteratin 
+	#0th iteration 
 
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
@@ -240,7 +248,9 @@ def main():
 	#pfam 30.0 FGF 
 	#selex_to_fasta('PF00167_full.txt', temp_file)
 	#pfam 32.0 FGF
-	selex_to_fasta('PF00167_latest.txt', temp_file)
+	#selex_to_fasta('PF00167_latest.txt', temp_file)
+	#SH3 family
+	selex_to_fasta('PF00018_full.txt', temp_file)
 	remove_dashes(temp_file, write_file)
 	cdhit(write_file, out_file)
 
@@ -298,5 +308,12 @@ def main():
 	print(cs)
 	end = time.time() - start
 	print('It took ' + str(end) + ' seconds to run the script' )
+
+'''
+def main_re():
+	my_list = [2, 6, 41, 85, 0, 3, 7, 6, 10, 211, 64, 77, 5, 99, 10]
+	res = Nmaxelements(my_list, 10)
+	print(res)
+'''
 if __name__ == '__main__':
     main()
