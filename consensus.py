@@ -2,10 +2,11 @@ import gzip
 import os
 from Bio import SeqIO
 import sys
-from collections import Counter
+from collections import Counter, OrderedDict
+import matplotlib.pyplot as plt
 
 amino_acids = 'ACDEFGHIKLMNPQRSTVWXY'
-amino_acids = list(amino_acids) + ['-']
+amino_acids = ['-'] + list(amino_acids)
 
 FGF_consensus_pdb = 'MRLRRLYCRTGGFHLQILPDGRVDGTREDNSPYSLLEIRAVEVGVVAIKGVKSGRYLAMNKKGRLYGSKHFTDECKFKERLLENGYNTYSSAKYRRGWYVALNKNGRPKKGNRTRRTQKATHFLPLPVSG'
 
@@ -22,14 +23,7 @@ def second_largest(numbers):
 				m2 = x
 
 	return m2 if count >= 2 else None
-'''
-def gzip_to_fasta(gzfile, wf):
-	write_file = open(wf, 'w')
-	with gzip.open(gzfile, 'rb') as f:
-		for line in f:
-			line = line.decode('utf-8')
-			write_file.write(line)
-'''
+
 #fasta file to clustalo CLI using os module
 def fasta_to_clustalo(in_file, out_file):
 	cmd = 'clustalo -i ' + in_file + ' -o ' + out_file + ' --force -v'
@@ -47,26 +41,25 @@ def fasta_to_list(out_file):
 	return sequences, name_list
 
 #finding profile matrix for sequences in list format
-def profile_matrix(sequences, pseudocount = 1):
+def profile_matrix(sequences):
 	sequence_length = len(sequences[0])
 	profile_matrix = {}
 	for acid in amino_acids:
-		profile_matrix[acid] = [pseudocount for i in range(sequence_length)]
+		profile_matrix[acid] = [float(0) for i in range(sequence_length)]
 
 	for i in range(len(sequences)):
 		seq = sequences[i]
 		for j in range(len(seq)):
-			profile_matrix[seq[j]][j] += 1
+			profile_matrix[seq[j]][j] += float(1)
 
 	for aa in profile_matrix:
 		l = profile_matrix[aa]
 		for i in range(len(l)):
-			if pseudocount > 0:
-				l[i] /= (len(sequences)*(1 + pseudocount))
-			else:
-				l[i] /= len(sequences)
+			l[i] /= float(len(sequences))
 
-	return profile_matrix
+	pm = OrderedDict([(x, profile_matrix[x]) for x in amino_acids])
+
+	return pm
 
 #finding index of bad sequence numbers in the sequence list
 def find_bad_sequences(profile_matrix, sequences, name_list):
@@ -85,16 +78,6 @@ def find_bad_sequences(profile_matrix, sequences, name_list):
 			if sequences[i][position] != '-':
 				if i not in bad_sequence_numbers:
 					bad_sequence_numbers.append(i)
-
-	'''
-	bad_seq_numbers = []
-	low = 0.8*mode
-	high = 1.2*mode
-	for num in bad_sequence_numbers:
-		length = sequence_length_without_dashes(sequences[num])
-		if length < low or length > high:
-			bad_seq_numbers.append(num)
-	'''
 
 	return bad_sequence_numbers
 
@@ -118,12 +101,15 @@ def list_to_fasta(sequences, name_list, fasta_file):
 def remove_dashes(fasta_file_from, fasta_file_to):
 	with open(fasta_file_from) as fin, open(fasta_file_to, 'w') as fout:
 		for line in fin:
-			fout.write(line.translate(str.maketrans('', '', '-')))
+			if line.startswith('>'):
+				fout.write(line)
+			else:
+				fout.write(line.translate(str.maketrans('', '', '-')))
 
 #find consensus sequence from sequences in list format
 def consensus_sequence(sequences):
 	consensus_seq = ''
-	pm = profile_matrix(sequences, 1)
+	pm = profile_matrix(sequences)
 	sequence_length = len(sequences[0])
 	for i in range(sequence_length):
 		l = []
@@ -133,6 +119,8 @@ def consensus_sequence(sequences):
 		if amino_acids[index] == '-':
 			if l[index] < 0.5:
 				index = l.index(second_largest(l))
+				print('taking second largest value', amino_acids[index])
+				print(l)
 			else:
 				continue
 		consensus_seq += amino_acids[index]
@@ -213,111 +201,71 @@ def consensus_length_cut_off(sequences, mode):
 
 	return flag
 
-'''
+def selex_to_fasta(in_file, out_file):
+	with open(in_file) as fin, open(out_file, 'w') as fout:
+		headers = []
+		sequences = []
+		for line in fin:
+			fout.write('>' + line[0:30] + '\n')
+			fout.write(line[30: ])
+
+def cdhit(in_file, out_file):
+	cmd = 'cd-hit -i ' + in_file + ' -o ' + out_file + ' -T 1 -c 0.90'
+	os.system(cmd)
+
+def check_fasta(file):
+	with open(file, "r") as handle:
+		fasta = SeqIO.parse(handle, "fasta")
+		return any(fasta)
+
 def main():
 
-	write_file = 'write.fasta'
-	out_file = 'output.fasta'
-	temp_file = 'temp.fasta'
-
-	remove_dashes(write_file, temp_file)
-	pm = {}
-	sequence_lengths = sequence_length_list(temp_file)
-
-	mode = mode_of_list(sequence_lengths)[0]
-	median = median_of_list(sequence_lengths)
-	mean = mean_of_list(sequence_lengths)
-
-	flag = cut_off(sequence_lengths, mode)
-
-	print('MODE | MEDIAN | MEAN' + '#'*100)
-
-	print(str(mode) + '|' + str(median) + '|' + str(mean))
-	sequences = []
-	name_list = []
-	iteration = 1
-
-	while flag is False:
-
-		print("ITERATION NUMBER: " + str(iteration) + '#'*100)
-
-		fasta_to_clustalo(temp_file, out_file)
-
-		sequences, name_list = fasta_to_list(out_file)
-		pm = profile_matrix(sequences, 1)
-		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-
-		list_to_fasta(sequences, name_list, write_file)
-		remove_dashes(write_file, temp_file)
-
-		sequence_lengths = sequence_length_list(temp_file)
-		print(sequence_lengths, '%'*100)
-		print(len(sequence_lengths), 'number of sequences !!!!!!!!!')
-		flag = cut_off(sequence_lengths, mode)
-		print(flag, '   FLAG'*20)	
-		print('MEDIAN | MEAN' + '#'*100)
-		median = median_of_list(sequence_lengths)
-		mean = mean_of_list(sequence_lengths)
-		print(str(median) + '|' + str(mean))
-		#print(consensus_sequence(sequences))
-		print(len(consensus_sequence(sequences)), '$'*100)
-
-		iteration += 1
-
-	print(consensus_sequence(sequences))
-'''
-def main():
+	#0th iteratin 
 
 	write_file = 'write.fasta'
-	copy_file('PF00167_full.fasta', write_file)
-	#write_file is already aligned
 	out_file = 'output.fasta'
 	temp_file = 'temp.fasta'
 	bad_sequences = 'bad_sequences.fasta'
 
+	selex_to_fasta('PF00167_full.txt', temp_file)
+	remove_dashes(temp_file, write_file)
+	cdhit(write_file, out_file)
 
-	#find cut off
-	sequences, name_list = fasta_to_list(write_file)
-	remove_dashes(write_file, temp_file)
-	sequence_lengths = sequence_length_list(temp_file)
+	sequence_lengths = sequence_length_list(out_file)
+	x = [i for i in range(len(sequence_lengths))]
+	plt.scatter(x, sequence_lengths)
+	plt.savefig('length_distribution.png')
+
 	mode = mode_of_list(sequence_lengths)[0]
-	flag = consensus_length_cut_off(sequences, mode)
-
-	print(flag, '%'*40)
+	fasta_to_clustalo(out_file, write_file)
+	
 	iteration = 1
 
-	while flag is False:
+	while True:
 		print("ITERATION: " + str(iteration) + '*'*30)
 		#convert aligned write_file to list
 		sequences, name_list = fasta_to_list(write_file)
-		print(len(sequences), '#'*50)
+		pm = profile_matrix(sequences)
+		#print(pm) #error here because these sequences are not aligned, FIX THIS
+		print(consensus_sequence(sequences), len(consensus_sequence(sequences)), 'CONSENSUS!!!!!')
 		#profile matrix 
-		pm = profile_matrix(sequences, 1)
+		#pm = profile_matrix(sequences)
 		#find bad sequence indices in sequences list
 		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-		#print length of bad sequences
-		lens = []
-		for num in bad_sequence_numbers:
-			lens.append(sequence_length_without_dashes(sequences[num]))
-		print(lens, '@'*35)
 		#remove bad sequences
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-		#write bad sequences to the bad_sequence file 
-		print(len(sequences), '$'*50)
 		#convert new/smaller sequence and name list to fasta file
-		print(consensus_sequence(sequences), 'CONSENSUS!!!!!')
+		#print(consensus_sequence(sequences), 'CONSENSUS!!!!!')
 		list_to_fasta(sequences, name_list, temp_file)
 		#remove dashes to make file ready for new alignment
 		remove_dashes(temp_file, out_file)
 		#find new cut off
-		sequence_lengths = sequence_length_list(out_file)
+		#sequence_lengths = sequence_length_list(write_file)
 
-		flag = consensus_length_cut_off(sequences, mode)
+		#flag = consensus_length_cut_off(sequences, mode)
 		#new alignment
 		fasta_to_clustalo(out_file, write_file)
 		iteration += 1
-
 
 if __name__ == '__main__':
     main()
