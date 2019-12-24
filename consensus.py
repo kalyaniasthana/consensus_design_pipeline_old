@@ -5,6 +5,7 @@ import sys
 from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 import time
+import copy
 
 start = time.time()
 
@@ -118,9 +119,9 @@ def remove_dashes(fasta_file_from, fasta_file_to):
 				fout.write(line.translate(str.maketrans('', '', '-')))
 
 #find consensus sequence from sequences in list format
-def consensus_sequence(sequences):
+def consensus_sequence(sequences, pm):
 	consensus_seq = ''
-	pm = profile_matrix(sequences)
+	#pm = profile_matrix(sequences)
 	sequence_length = len(sequences[0])
 	for i in range(sequence_length):
 		l = []
@@ -246,11 +247,11 @@ def main():
 	temp_file = 'temp.fasta'
 	bad_sequences = 'bad_sequences.fasta'
 	#pfam 30.0 FGF 
-	#selex_to_fasta('PF00167_full.txt', temp_file)
+	selex_to_fasta('PF00167_full.txt', temp_file)
 	#pfam 32.0 FGF
 	#selex_to_fasta('PF00167_latest.txt', temp_file)
 	#SH3 family
-	selex_to_fasta('PF00018_full.txt', temp_file)
+	#selex_to_fasta('PF00018_full.txt', temp_file)
 	remove_dashes(temp_file, write_file)
 	cdhit(write_file, out_file)
 
@@ -267,6 +268,7 @@ def main():
 	#if number of sequences < 100
 	#if length of alignment does not change in subsequent iterations
 	#if length of alignment becomes to small i.e -15 the desired length (mode length)
+	loa = 0
 
 	while True:
 		print("ITERATION: " + str(iteration) + '*'*30)
@@ -275,11 +277,12 @@ def main():
 		number_of_sequences = len(sequences)
 		length_of_alignment = len(sequences[0])
 		print('LENGTH OF ALIGNMENT = ', length_of_alignment)
-		if number_of_sequences < 100 or length_of_alignment < mode - 15:
+		print(loa, length_of_alignment, 'COMPARING LOAs')
+		if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
 			break
 		pm = profile_matrix(sequences)
 		#print(pm) #error here because these sequences are not aligned, FIX THIS
-		cs = consensus_sequence(sequences)
+		cs = consensus_sequence(sequences, pm)
 		print(cs, len(cs), 'CONSENSUS!!')
 		#profile matrix 
 		#pm = profile_matrix(sequences)
@@ -298,10 +301,13 @@ def main():
 		#flag = consensus_length_cut_off(sequences, mode)
 		#new alignment
 		fasta_to_clustalo(out_file, write_file)
-		temp_seqs, temp_names = fasta_to_list(write_file)
-		loa = len(temp_seqs[0])
-		if loa == length_of_alignment:
-			break
+		#this part is an overhead, but it's the only way to add the third exit condition? maybe not, I'm getting ideas
+		#temp_seqs, temp_names = fasta_to_list(write_file)
+		#loa = len(temp_seqs[0])
+		#if loa == length_of_alignment:
+		#	break
+		loa = copy.deepcopy(length_of_alignment)
+
 		iteration += 1
 
 	print('***********Final Consensus Sequence: ' + '\n')
