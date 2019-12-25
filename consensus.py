@@ -39,10 +39,14 @@ def second_largest(numbers):
 def fasta_to_clustalo(in_file, out_file):
 	cmd = 'clustalo -i ' + in_file + ' -o ' + out_file + ' --force -v'
 	os.system(cmd)
-
+#fasta file to MAFFT
 def fasta_to_mafft(in_file, out_file):
 	cmd = 'mafft ' + in_file + ' > ' + out_file
 	os.system(cmd) 
+#fasta file to MUSCLE
+def fasta_to_muscle(in_file, out_file):
+	cmd = 'muscle -in ' + in_file + ' -out ' + out_file
+	os.system(cmd)
 
 #converting fasta file into two lists (sequence list and name/header list)
 def fasta_to_list(out_file):
@@ -251,11 +255,11 @@ def main():
 	temp_file = 'temp.fasta'
 	bad_sequences = 'bad_sequences.fasta'
 	#pfam 30.0 FGF 
-	#selex_to_fasta('PF00167_full.txt', temp_file)
+	selex_to_fasta('PF00167_full.txt', temp_file)
 	#pfam 32.0 FGF
 	#selex_to_fasta('PF00167_latest.txt', temp_file)
 	#SH3 family
-	selex_to_fasta('PF00018_full.txt', temp_file)
+	#selex_to_fasta('PF00018_full.txt', temp_file)
 	remove_dashes(temp_file, write_file)
 	cdhit(write_file, out_file)
 
@@ -268,7 +272,9 @@ def main():
 	#clustalo
 	#fasta_to_clustalo(out_file, write_file)
 	#mafft
-	fasta_to_mafft(out_file, write_file)	
+	#fasta_to_mafft(out_file, write_file)
+	#muscle
+	fasta_to_muscle(out_file, write_file)	
 	iteration = 1
 	#exit conditions
 	#if number of sequences < 100
@@ -309,7 +315,9 @@ def main():
 		#clustalo
 		#fasta_to_clustalo(out_file, write_file)
 		#mafft
-		fasta_to_mafft(out_file, write_file)
+		#fasta_to_mafft(out_file, write_file)
+		#muscle
+		fasta_to_muscle(out_file, write_file)
 		#this part is an overhead, but it's the only way to add the third exit condition? maybe not, I'm getting ideas
 		#temp_seqs, temp_names = fasta_to_list(write_file)
 		#loa = len(temp_seqs[0])
