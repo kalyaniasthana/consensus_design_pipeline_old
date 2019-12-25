@@ -246,10 +246,22 @@ def get_all_indices(l, value):
 
 	return [i for i, val in enumerate(l) if val == value]
 
+def alignment(option, in_file, out_file):
+	if option == '1':
+		fasta_to_clustalo(in_file, out_file)
+	elif option == '2':
+		fasta_to_mafft(in_file, out_file)
+	elif option == '3':
+		fasta_to_muscle(in_file, out_file)
+	else:
+		print('Invalid Option')
+		sys.exit()
+
 def main():
 
 	#0th iteration 
-
+	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
+	option = input()
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
 	temp_file = 'temp.fasta'
@@ -274,7 +286,7 @@ def main():
 	#mafft
 	#fasta_to_mafft(out_file, write_file)
 	#muscle
-	fasta_to_muscle(out_file, write_file)	
+	alignment(option, out_file, write_file)	
 	iteration = 1
 	#exit conditions
 	#if number of sequences < 100
@@ -317,7 +329,7 @@ def main():
 		#mafft
 		#fasta_to_mafft(out_file, write_file)
 		#muscle
-		fasta_to_muscle(out_file, write_file)
+		alignment(option, out_file, write_file)
 		#this part is an overhead, but it's the only way to add the third exit condition? maybe not, I'm getting ideas
 		#temp_seqs, temp_names = fasta_to_list(write_file)
 		#loa = len(temp_seqs[0])
