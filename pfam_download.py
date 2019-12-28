@@ -1,5 +1,7 @@
 import requests
-from bs4 import BeautifulSoup 
+from bs4 import BeautifulSoup
+from os import path
+import re
 
 def accession_list():
 
@@ -26,7 +28,7 @@ def accession_list():
 
 		for i in range(len(line_list)):
 			x = line_list[i]
-			if x.startswith('PF'):
+			if re.search('^PF', x):
 				try:
 					size = int(line_list[i + 3])
 					if size >= 400:
@@ -43,18 +45,20 @@ def accession_list():
 def download_entries(accession_with_size):
 
 	for key in accession_with_size:
-		print('Downloading alignment: ' + key)
-		download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=l&gaps=dashes&download=0'
-		response = requests.get(download_url)
-		try:
-			soup = BeautifulSoup(response.text, 'html.parser')
-			text = soup.get_text()
-			filename = 'families/' + key + '.fasta'
-			with open(filename, 'w') as f:
-				for line in text:
-					f.write(line)
-		except:
-			continue
+		filename = 'families/' + key + '.fasta'
+		if path.exists(filename) is False:
+			download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=l&gaps=dashes&download=0'
+			try:
+				print('Downloading alignment: ' + key)
+				response = requests.get(download_url)
+				soup = BeautifulSoup(response.text, 'html.parser')
+				text = soup.get_text()
+				filename = 'families/' + key + '.fasta'
+				with open(filename, 'w') as f:
+					for line in text:
+						f.write(line)
+			except:
+				continue
 
 def main():
 	accession_with_size = accession_list()
