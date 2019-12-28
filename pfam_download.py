@@ -1,7 +1,19 @@
 import requests
 from bs4 import BeautifulSoup
+import os
 from os import path
 import re
+import socket
+from time import gmtime, strftime
+import sys
+
+def is_connected():
+    try:
+        socket.create_connection(("www.google.com", 80))
+        return True
+    except OSError:
+        pass
+    return False
 
 def accession_list():
 
@@ -40,28 +52,42 @@ def accession_list():
 				except:
 					continue
 
-	return accession_with_size
+	with open('resources/accession_list.txt', 'w') as f:
+		for i in accession_with_size:
+			f.write(str(i) +"\n")
+
+	print('pickle dumped......')
 
 def download_entries(accession_with_size):
-
 	for key in accession_with_size:
-		filename = 'families/' + key + '.fasta'
-		if path.exists(filename) is False:
-			download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=l&gaps=dashes&download=0'
-			try:
-				print('Downloading alignment: ' + key)
-				response = requests.get(download_url)
-				soup = BeautifulSoup(response.text, 'html.parser')
-				text = soup.get_text()
-				filename = 'families/' + key + '.fasta'
-				with open(filename, 'w') as f:
-					for line in text:
-						f.write(line)
-			except:
-				continue
+		if is_connected():
+			filename = 'families/' + key + '.fasta'
+			if path.exists(filename) is False:
+				download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=l&gaps=dashes&download=0'
+				try:
+					print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+					print('Downloading alignment: ' + key)
+					response = requests.get(download_url)
+					soup = BeautifulSoup(response.text, 'html.parser')
+					text = soup.get_text()
+					filename = 'families/' + key + '.fasta'
+					with open(filename, 'w') as f:
+						for line in text:
+							f.write(line)
+				except:
+					continue
+		else:
+			print('Internet disconnected!')
+			sys.exit()
 
 def main():
-	accession_with_size = accession_list()
+	#accession_list()
+	#sys.exit()
+	accession_with_size = []
+	with open('resources/accession_list.txt', 'r') as f:
+		for line in f:
+			accession_with_size.append(line.strip('\n'))
+	#print(accession_with_size, len(accession_with_size))
 	download_entries(accession_with_size)
 
 if __name__ == '__main__':
