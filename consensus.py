@@ -6,20 +6,12 @@ from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 import time
 import copy
+from shutil import copyfile
 
 start = time.time()
 
 amino_acids = 'ACDEFGHIKLMNPQRSTVWXY'
 amino_acids = ['-'] + list(amino_acids)
-
-FGF_consensus_pdb = 'MRLRRLYCRTGGFHLQILPDGRVDGTREDNSPYSLLEIRAVEVGVVAIKGVKSGRYLAMNKKGRLYGSKHFTDECKFKERLLENGYNTYSSAKYRRGWYVALNKNGRPKKGNRTRRTQKATHFLPLPVSG'
-
-def Nmaxelements(input_list, N): 
-	final_list = []
-	input_list.sort(reverse = True)
-	for i in range(N):
-		final_list.append(input_list[i])
-	return final_list
 
 #finding second largest number in a list
 def second_largest(numbers):
@@ -39,10 +31,12 @@ def second_largest(numbers):
 def fasta_to_clustalo(in_file, out_file):
 	cmd = 'clustalo -i ' + in_file + ' -o ' + out_file + ' --force -v'
 	os.system(cmd)
+
 #fasta file to MAFFT
 def fasta_to_mafft(in_file, out_file):
 	cmd = 'mafft ' + in_file + ' > ' + out_file
-	os.system(cmd) 
+	os.system(cmd)
+
 #fasta file to MUSCLE
 def fasta_to_muscle(in_file, out_file):
 	cmd = 'muscle -in ' + in_file + ' -out ' + out_file
@@ -170,61 +164,6 @@ def mode_of_list(sequence_lengths):
 	else:
 		return mode
 
-def median_of_list(sequence_lengths):
-	n = len(sequence_lengths) 
-	sequence_lengths.sort() 
-	if n % 2 == 0:
-		median1 = sequence_lengths[n//2]
-		median2 = sequence_lengths[n//2 - 1] 
-		median = (median1 + median2)/2
-	else:
-		median = sequence_lengths[n//2] 
-
-	return median
-
-def mean_of_list(sequence_lengths):
-	n = len(sequence_lengths) 
-	get_sum = sum(sequence_lengths)
-	mean = get_sum / n
-	return mean
-'''
-#returns True only if all sequence length are within +/-20% of the initial mode length
-def cut_off(sequence_lengths, mode):
-	high = mode*1.2
-	low = mode*0.8
-	flag = True
-	for length in sequence_lengths:
-		if length > high or length < low:
-			flag = False
-			break
-		
-	return flag
-
-def copy_file(in_file, out_file):
-	with open(in_file) as fin, open(out_file, 'w') as fout:
-		for line in fin:
-			fout.write(line)
-'''
-def sequence_length_without_dashes(sequence):
-	new_seq = ''
-	for i in range(len(sequence)):
-		if sequence[i] == '-':
-			continue
-		else:
-			new_seq += sequence[i]
-
-	return len(new_seq)
-'''
-def consensus_length_cut_off(sequences, mode):
-	flag = False
-	cs = len(consensus_sequence(sequences))
-	high = mode*1.05
-	low = mode*0.95
-	if cs > low and cs < high:
-		flag = True
-
-	return flag
-'''
 def selex_to_fasta(in_file, out_file):
 	with open(in_file) as fin, open(out_file, 'w') as fout:
 		headers = []
@@ -236,11 +175,6 @@ def selex_to_fasta(in_file, out_file):
 def cdhit(in_file, out_file):
 	cmd = 'cd-hit -i ' + in_file + ' -o ' + out_file + ' -T 1 -c 0.90'
 	os.system(cmd)
-
-def check_fasta(file):
-	with open(file, "r") as handle:
-		fasta = SeqIO.parse(handle, "fasta")
-		return any(fasta)
 
 def get_all_indices(l, value):
 
@@ -265,27 +199,23 @@ def main():
 	write_file = 'write.fasta'
 	out_file = 'output.fasta'
 	temp_file = 'temp.fasta'
-	bad_sequences = 'bad_sequences.fasta'
-	#pfam 30.0 FGF 
-	selex_to_fasta('PF00167_full.txt', temp_file)
-	#pfam 32.0 FGF
-	#selex_to_fasta('PF00167_latest.txt', temp_file)
-	#SH3 family
-	#selex_to_fasta('PF00018_full.txt', temp_file)
+
+	filename = 'PF00021'
+	file = 'families/' + filename + '.fasta'
+	copyfile(file, temp_file)
 	remove_dashes(temp_file, write_file)
 	cdhit(write_file, out_file)
+
+	refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
+	plot = 'length_distributions/' + filename + '_length_distribution.png'
+	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.txt'
 
 	sequence_lengths = sequence_length_list(out_file)
 	x = [i for i in range(len(sequence_lengths))]
 	plt.scatter(x, sequence_lengths)
-	plt.savefig('length_distribution.png')
+	plt.savefig(plot)
 
 	mode = mode_of_list(sequence_lengths)[0]
-	#clustalo
-	#fasta_to_clustalo(out_file, write_file)
-	#mafft
-	#fasta_to_mafft(out_file, write_file)
-	#muscle
 	alignment(option, out_file, write_file)	
 	iteration = 1
 	#exit conditions
@@ -302,41 +232,27 @@ def main():
 		length_of_alignment = len(sequences[0])
 		print('LENGTH OF ALIGNMENT = ', length_of_alignment)
 		print(loa, length_of_alignment, 'COMPARING LOAs')
+
 		if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
+			copyfile(write_file, refined_alignment)
+			f = open(final_consensus, 'w')
+			f.write(cs)
+			f.close()
 			break
+
 		pm = profile_matrix(sequences)
-		#print(pm) #error here because these sequences are not aligned, FIX THIS
 		cs = consensus_sequence(sequences, pm)
+
 		print(cs, len(cs), 'CONSENSUS!!')
-		#profile matrix 
-		#pm = profile_matrix(sequences)
-		#find bad sequence indices in sequences list
+
 		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-		#remove bad sequences
 		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-		#convert new/smaller sequence and name list to fasta file
-		#print(consensus_sequence(sequences), 'CONSENSUS!!!!!')
 		list_to_fasta(sequences, name_list, temp_file)
+
 		#remove dashes to make file ready for new alignment
 		remove_dashes(temp_file, out_file)
-		#find new cut off
-		#sequence_lengths = sequence_length_list(write_file)
-
-		#flag = consensus_length_cut_off(sequences, mode)
-		#new alignment
-		#clustalo
-		#fasta_to_clustalo(out_file, write_file)
-		#mafft
-		#fasta_to_mafft(out_file, write_file)
-		#muscle
 		alignment(option, out_file, write_file)
-		#this part is an overhead, but it's the only way to add the third exit condition? maybe not, I'm getting ideas
-		#temp_seqs, temp_names = fasta_to_list(write_file)
-		#loa = len(temp_seqs[0])
-		#if loa == length_of_alignment:
-		#	break
 		loa = copy.deepcopy(length_of_alignment)
-
 		iteration += 1
 
 	print('***********Final Consensus Sequence: ' + '\n')
@@ -344,11 +260,8 @@ def main():
 	end = time.time() - start
 	print('It took ' + str(end) + ' seconds to run the script' )
 
-'''
-def main_re():
-	my_list = [2, 6, 41, 85, 0, 3, 7, 6, 10, 211, 64, 77, 5, 99, 10]
-	res = Nmaxelements(my_list, 10)
-	print(res)
-'''
 if __name__ == '__main__':
     main()
+
+#refined alignment
+#consensus at every iteration
