@@ -49,7 +49,7 @@ def fasta_to_list(out_file):
 
 	for record in SeqIO.parse(out_file, 'fasta'):
 		name_list.append(record.id)
-		sequences.append(str(record.seq))
+		sequences.append(str(record.seq).upper())
 
 	return sequences, name_list
 
@@ -61,7 +61,7 @@ def profile_matrix(sequences):
 		profile_matrix[acid] = [float(0) for i in range(sequence_length)]
 
 	for i in range(len(sequences)):
-		seq = sequences[i]
+		seq = sequences[i].upper()
 		for j in range(len(seq)):
 			profile_matrix[seq[j]][j] += float(1)
 
@@ -107,7 +107,7 @@ def remove_bad_sequences(sequences, name_list, bad_sequence_numbers):
 def list_to_fasta(sequences, name_list, fasta_file):
 	file = open(fasta_file, 'w')
 	for i in range(len(sequences)):
-		file.write('>' + name_list[i] + '\n' + sequences[i] + '\n')
+		file.write('>' + name_list[i] + '\n' + sequences[i].upper() + '\n')
 
 	file.close()
 
@@ -169,8 +169,8 @@ def selex_to_fasta(in_file, out_file):
 		headers = []
 		sequences = []
 		for line in fin:
-			fout.write('>' + line[0:30] + '\n')
-			fout.write(line[30: ])
+			fout.write('>' + line[0:30].upper() + '\n')
+			fout.write(line[30: ].upper())
 
 def cdhit(in_file, out_file):
 	cmd = 'cd-hit -i ' + in_file + ' -o ' + out_file + ' -T 1 -c 0.90'
@@ -179,6 +179,13 @@ def cdhit(in_file, out_file):
 def get_all_indices(l, value):
 
 	return [i for i, val in enumerate(l) if val == value]
+
+def stockholm_to_fasta(ifile, ofile):
+	with open(ifile, 'r') as fin:
+		with open(ofile, 'w') as fout:
+			sequences = SeqIO.parse(ifile, 'stockholm')
+			SeqIO.write(sequences, ofile, 'fasta')
+	os.system('rm -rf ' + ifile)
 
 def alignment(option, in_file, out_file):
 	if option == '1':
@@ -196,19 +203,26 @@ def main():
 	#0th iteration 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	option = input()
-	write_file = 'write.fasta'
-	out_file = 'output.fasta'
-	temp_file = 'temp.fasta'
+	write_file = 'resources/write.fasta'
+	out_file = 'resources/output.fasta'
+	temp_file = 'resources/temp.fasta'
 
-	filename = 'PF00021'
-	file = 'families/' + filename + '.fasta'
+	filename = 'PF00032'
+	file = 'pfam_entries/' + filename + '.fasta'
 	copyfile(file, temp_file)
 	remove_dashes(temp_file, write_file)
-	cdhit(write_file, out_file)
+
+	try:
+		cdhit(write_file, out_file)
+	except:
+		print('Unable to cluster sequences. Try checking the input file.')
+		sys.exit()
 
 	refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
 	plot = 'length_distributions/' + filename + '_length_distribution.png'
 	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.txt'
+	profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
+	emitted_alignment = 'hmm_emitted_alignment/' + filename + '_hmmalignment.sto'
 
 	sequence_lengths = sequence_length_list(out_file)
 	x = [i for i in range(len(sequence_lengths))]
@@ -216,52 +230,71 @@ def main():
 	plt.savefig(plot)
 
 	mode = mode_of_list(sequence_lengths)[0]
-	alignment(option, out_file, write_file)	
+	try:
+		alignment(option, out_file, write_file)
+	except:
+		print('Unable to align sequences. Check input file? ')
+		sys.exit()
+
 	iteration = 1
 	#exit conditions
 	#if number of sequences < 100
 	#if length of alignment does not change in subsequent iterations
 	#if length of alignment becomes to small i.e -15 the desired length (mode length)
 	loa = 0
+	try:
 
-	while True:
-		print("ITERATION: " + str(iteration) + '*'*30)
-		#convert aligned write_file to list
-		sequences, name_list = fasta_to_list(write_file)
-		number_of_sequences = len(sequences)
-		length_of_alignment = len(sequences[0])
-		print('LENGTH OF ALIGNMENT = ', length_of_alignment)
-		print(loa, length_of_alignment, 'COMPARING LOAs')
+		while True:
+			print("ITERATION: " + str(iteration) + '*'*30)
+			#convert aligned write_file to list
+			sequences, name_list = fasta_to_list(write_file)
+			number_of_sequences = len(sequences)
+			length_of_alignment = len(sequences[0])
+			print('LENGTH OF ALIGNMENT = ', length_of_alignment)
+			print(loa, length_of_alignment, 'COMPARING LOAs')
 
-		if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
-			copyfile(write_file, refined_alignment)
-			f = open(final_consensus, 'w')
-			f.write(cs)
-			f.close()
-			break
+			if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
+				copyfile(write_file, refined_alignment)
+				f = open(final_consensus, 'w')
+				f.write(cs)
+				f.close()
+				break
 
-		pm = profile_matrix(sequences)
-		cs = consensus_sequence(sequences, pm)
+			pm = profile_matrix(sequences)
+			cs = consensus_sequence(sequences, pm)
 
-		print(cs, len(cs), 'CONSENSUS!!')
+			print(cs, len(cs), 'CONSENSUS!!')
 
-		bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-		sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-		list_to_fasta(sequences, name_list, temp_file)
+			bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
+			sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+			list_to_fasta(sequences, name_list, temp_file)
 
-		#remove dashes to make file ready for new alignment
-		remove_dashes(temp_file, out_file)
-		alignment(option, out_file, write_file)
-		loa = copy.deepcopy(length_of_alignment)
-		iteration += 1
+			#remove dashes to make file ready for new alignment
+			remove_dashes(temp_file, out_file)
+			alignment(option, out_file, write_file)
+			loa = copy.deepcopy(length_of_alignment)
+			iteration += 1
+
+	except:
+
+		print('Iteration error')
+		sys.exit()
 
 	print('***********Final Consensus Sequence: ' + '\n')
 	print(cs)
 	end = time.time() - start
-	print('It took ' + str(end) + ' seconds to run the script' )
+	print('It took ' + str(end) + ' seconds to run the script')
+
+def main_re():
+	'''
+	file = 'refined_alignments/PF00021_refined.fasta'
+	sequences, headers = fasta_to_list(file)
+	nos = len(sequences)
+	print(nos)
+	'''
+	ifile = 'hmm_emitted_alignments/PF00021_hmmalignment'
+	ofile = 'hmm_emitted_alignments/PF00021_hmmalignment.fasta'
+	stockholm_to_fasta(ifile, ofile)
 
 if __name__ == '__main__':
-    main()
-
-#refined alignment
-#consensus at every iteration
+    main_re()
