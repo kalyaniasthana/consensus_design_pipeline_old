@@ -207,7 +207,7 @@ def main():
 	out_file = 'resources/output.fasta'
 	temp_file = 'resources/temp.fasta'
 
-	filename = 'PF00032'
+	filename = 'PF11830'
 	file = 'pfam_entries/' + filename + '.fasta'
 	copyfile(file, temp_file)
 	remove_dashes(temp_file, write_file)
@@ -222,7 +222,8 @@ def main():
 	plot = 'length_distributions/' + filename + '_length_distribution.png'
 	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.txt'
 	profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
-	emitted_alignment = 'hmm_emitted_alignment/' + filename + '_hmmalignment.sto'
+	emitted_alignment = 'hmm_emitted_alignments/' + filename + '_hmmalignment.sto'
+	emitted_alignment_fasta = 'hmm_emitted_alignments/' + filename + '_hmmalignment.fasta'
 
 	sequence_lengths = sequence_length_list(out_file)
 	x = [i for i in range(len(sequence_lengths))]
@@ -258,6 +259,13 @@ def main():
 				f = open(final_consensus, 'w')
 				f.write(cs)
 				f.close()
+				cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
+				os.system(cwd)
+				N = len(sequences)
+				cwd = 'hmmemit -N ' + str(N) + ' -o ' + emitted_alignment + ' -a ' + profile_hmm
+				print(cwd)
+				os.system(cwd)
+				stockholm_to_fasta(emitted_alignment, emitted_alignment_fasta)
 				break
 
 			pm = profile_matrix(sequences)
@@ -297,4 +305,4 @@ def main_re():
 	stockholm_to_fasta(ifile, ofile)
 
 if __name__ == '__main__':
-    main_re()
+    main()
