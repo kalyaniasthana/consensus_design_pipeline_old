@@ -6,6 +6,8 @@ import re
 import socket
 from time import gmtime, strftime
 import sys
+import subprocess
+
 
 def is_connected():
     try:
@@ -27,16 +29,22 @@ def accession_list():
 		print('Fetching entries that start with: ' + key)
 		browse_url = 'https://pfam.xfam.org/family/browse?browse=' + key
 		response = requests.get(browse_url)
+		if response.status_code == 200 or response.status_code == '200':
+			try:
+				soup = BeautifulSoup(response.text, 'html.parser')
+				find = soup.find_all('tr')
+				for i in find:
+					line = i.text
+					line = line.split('\n')
+					for l in line:
+						if l != '':
+							line_list.append(l)
+			except:
+				print('Response Error')
+				sys.exit()
+		else:
+			continue
 
-		if response.status_code == 200:
-			soup = BeautifulSoup(response.text, 'html.parser')
-			find = soup.find_all('tr')
-			for i in find:
-				line = i.text
-				line = line.split('\n')
-				for l in line:
-					if l != '':
-						line_list.append(l)
 
 		for i in range(len(line_list)):
 			x = line_list[i]
@@ -61,24 +69,41 @@ def accession_list():
 def download_entries(accession_with_size):
 	for key in accession_with_size:
 		if is_connected():
-			filename = 'families/' + key + '.fasta'
+			filename = 'pfam_entries/' + key + '.fasta'
 			if path.exists(filename) is False:
-				download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=l&gaps=dashes&download=0'
+				old_filename = 'families/' + key + '.fasta'
+				if path.exists:
+					os.system('rm -rf ' + old_filename)
+				download_url = 'https://pfam.xfam.org/family/' + key + '/alignment/full/format?format=fasta&alnType=full&order=t&case=u&gaps=dashes&download=0'
 				try:
 					print(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
 					print('Downloading alignment: ' + key)
 					response = requests.get(download_url)
-					soup = BeautifulSoup(response.text, 'html.parser')
-					text = soup.get_text()
-					filename = 'families/' + key + '.fasta'
-					with open(filename, 'w') as f:
-						for line in text:
-							f.write(line)
+					if response.status_code == 200 or response.status_code == '200':
+
+						soup = BeautifulSoup(response.text, 'html.parser')
+						text = soup.get_text()
+						filename = 'pfam_entries/' + key + '.fasta'
+						with open(filename, 'w') as f:
+							for line in text:
+								if line.startswith('500 Internal Server Error'):
+									return 
+								f.write(line)
+					else:
+						continue
 				except:
 					continue
 		else:
-			print('Internet disconnected!')
-			sys.exit()
+			return
+
+def test():
+    os.chdir('/media/Data/consensus/pfam_entries')
+    files = os.listdir('.')
+    for x in files:
+        with open(x, "r") as inputFile:
+            content = inputFile.read()
+        with open(x, "wb") as outputFile:
+            outputFile.write(content.upper())
 
 def main():
 	#accession_list()
@@ -88,7 +113,15 @@ def main():
 		for line in f:
 			accession_with_size.append(line.strip('\n'))
 	#print(accession_with_size, len(accession_with_size))
-	download_entries(accession_with_size)
+	dict_size = len(accession_with_size)
+	while True:
+		download_entries(accession_with_size)
+		os.chdir('media/Data/consensus/pfam_entries')
+		size_of_directory = int(subprocess.check_output('ls -l | wc -l', shell=True))
+		if dict_size == size_of_directory:
+			break
+	print('Download Complete!')
+	return
 
 if __name__ == '__main__':
     main()
