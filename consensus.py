@@ -1,6 +1,6 @@
 import gzip
 import os
-from Bio import SeqIO
+from Bio import SeqIO, AlignIO
 import sys
 from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
@@ -187,6 +187,17 @@ def stockholm_to_fasta(ifile, ofile):
 			SeqIO.write(sequences, ofile, 'fasta')
 	os.system('rm -rf ' + ifile)
 
+#Percent Identity = (Matches x 100)/Length of aligned region (with gaps)
+def percentage_identity(consensus_fasta):
+	seqs, head = fasta_to_list(consensus_fasta)
+	matches = 0
+	seq_length = len(seqs[0])
+	for i in range(seq_length):
+		if seqs[0][i] == seqs[1][i]:
+			matches += 1
+	pi = (matches*100)/seq_length
+	return pi
+
 def alignment(option, in_file, out_file):
 	if option == '1':
 		fasta_to_clustalo(in_file, out_file)
@@ -220,10 +231,11 @@ def main():
 
 	refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
 	plot = 'length_distributions/' + filename + '_length_distribution.png'
-	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.txt'
+	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.fasta'
 	profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
 	emitted_alignment = 'hmm_emitted_alignments/' + filename + '_hmmalignment.sto'
 	emitted_alignment_fasta = 'hmm_emitted_alignments/' + filename + '_hmmalignment.fasta'
+	aligned_cs = 'aligned_consensuses/' + filename + '_consensus_aligned.fasta'
 
 	sequence_lengths = sequence_length_list(out_file)
 	x = [i for i in range(len(sequence_lengths))]
@@ -257,21 +269,29 @@ def main():
 			if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
 				copyfile(write_file, refined_alignment)
 				f = open(final_consensus, 'w')
-				f.write(cs)
-				f.close()
+				f.write('>consensus-from-refined_alignment' + '\n')
+				f.write(cs + '\n')
 				cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
 				os.system(cwd)
 				N = len(sequences)
 				cwd = 'hmmemit -N ' + str(N) + ' -o ' + emitted_alignment + ' -a ' + profile_hmm
-				print(cwd)
 				os.system(cwd)
 				stockholm_to_fasta(emitted_alignment, emitted_alignment_fasta)
+				hmm_sequences, hmm_headers = fasta_to_list(emitted_alignment_fasta)
+				hmm_pm = profile_matrix(hmm_sequences)
+				hmm_cs = consensus_sequence(hmm_sequences, hmm_pm)
+				f.write('>consensus-from-emitted_alignment' + '\n')
+				f.write(hmm_cs + '\n')
+				f.close()
+				alignment(option, final_consensus, aligned_cs)
+				pi = percentage_identity(aligned_cs)
+				print(pi, 'PERCENTAGE IDENTITY OF THE TWO CONSENSUSES')
 				break
 
 			pm = profile_matrix(sequences)
 			cs = consensus_sequence(sequences, pm)
 
-			print(cs, len(cs), 'CONSENSUS!!')
+			print(cs, len(cs), 'CONSENSUS FROM REFINED ALIGNMENT')
 
 			bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 			sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
@@ -283,26 +303,15 @@ def main():
 			loa = copy.deepcopy(length_of_alignment)
 			iteration += 1
 
-	except:
+	except Exception as e:
+		print('Exception: ' + e)
 
-		print('Iteration error')
-		sys.exit()
-
-	print('***********Final Consensus Sequence: ' + '\n')
+	print('***********Final Consensus Sequence from refined alignment: ')
 	print(cs)
+	print('***********Final Consensus Sequence from hmm emitted alignment: ')
+	print(hmm_cs)
 	end = time.time() - start
 	print('It took ' + str(end) + ' seconds to run the script')
-
-def main_re():
-	'''
-	file = 'refined_alignments/PF00021_refined.fasta'
-	sequences, headers = fasta_to_list(file)
-	nos = len(sequences)
-	print(nos)
-	'''
-	ifile = 'hmm_emitted_alignments/PF00021_hmmalignment'
-	ofile = 'hmm_emitted_alignments/PF00021_hmmalignment.fasta'
-	stockholm_to_fasta(ifile, ofile)
-
+	
 if __name__ == '__main__':
     main()
