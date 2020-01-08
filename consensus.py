@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 import time
 import copy
 from shutil import copyfile
+import json
+from os import path
+import pandas as pd
 
 start = time.time()
 
@@ -198,6 +201,28 @@ def percentage_identity(consensus_fasta):
 	pi = (matches*100)/seq_length
 	return pi
 
+def store_retrieve_identity_dict(accession, pi, filename):
+	my_dict = {}
+	with open(filename, 'a') as f:
+		f.write(accession + ':' + str(pi) + '\n')
+
+	with open(filename) as f:
+		for line in f:
+			line = line.strip('\n')
+			line = line.split(':')
+			my_dict[line[0]] = float(line[1])
+
+	return my_dict
+
+def plot_dict_key_and_value(my_dict):
+	accessions = list(my_dict.keys())
+	pi_values = list(my_dict.values())
+	pi_values = [int(i) for i in pi_values]
+	df = pd.DataFrame({'Accession' : accessions, '% Identity' : pi_values})
+	ax = df.plot.bar(x = 'Accession', y = '% Identity', rot = 0,  stacked = True, colormap = 'Paired')
+	fig = ax.get_figure()
+	fig.savefig('resources/pi_plot.png')
+
 def alignment(option, in_file, out_file):
 	if option == '1':
 		fasta_to_clustalo(in_file, out_file)
@@ -211,107 +236,131 @@ def alignment(option, in_file, out_file):
 
 def main():
 
-	#0th iteration 
+	accession_list = []
+	with open('resources/accession_list.txt', 'r') as f:
+		for line in f:
+			accession_list.append(line.strip('\n'))
+
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	option = input()
 	write_file = 'resources/write.fasta'
 	out_file = 'resources/output.fasta'
 	temp_file = 'resources/temp.fasta'
 
-	filename = 'PF11830'
-	file = 'pfam_entries/' + filename + '.fasta'
-	copyfile(file, temp_file)
-	remove_dashes(temp_file, write_file)
+	for accession in accession_list:
+		my_file = 'pfam_entries/' + accession + '.fasta'
+		if path.exists(my_file):
 
-	try:
-		cdhit(write_file, out_file)
-	except:
-		print('Unable to cluster sequences. Try checking the input file.')
-		sys.exit()
+			#0th iteration 
+			filename = accession
+			print(filename, '%'*30)
+			file = 'pfam_entries/' + filename + '.fasta'
+			copyfile(file, temp_file)
+			remove_dashes(temp_file, write_file)
+			my_dict = {}
 
-	refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
-	plot = 'length_distributions/' + filename + '_length_distribution.png'
-	final_consensus = 'all_consensus_sequences/' + filename + '_consensus.fasta'
-	profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
-	emitted_alignment = 'hmm_emitted_alignments/' + filename + '_hmmalignment.sto'
-	emitted_alignment_fasta = 'hmm_emitted_alignments/' + filename + '_hmmalignment.fasta'
-	aligned_cs = 'aligned_consensuses/' + filename + '_consensus_aligned.fasta'
+			#####################################
+			#break condition for testing purposes
+			test_seq, test_head = fasta_to_list(write_file)
+			if len(test_seq) > 3000:
+				continue
+			#####################################
 
-	sequence_lengths = sequence_length_list(out_file)
-	x = [i for i in range(len(sequence_lengths))]
-	plt.scatter(x, sequence_lengths)
-	plt.savefig(plot)
+			try:
+				cdhit(write_file, out_file)
+			except Exception as e:
+				print('Exception: ' + str(e))
+				continue
 
-	mode = mode_of_list(sequence_lengths)[0]
-	try:
-		alignment(option, out_file, write_file)
-	except:
-		print('Unable to align sequences. Check input file? ')
-		sys.exit()
+			refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
+			plot = 'length_distributions/' + filename + '_length_distribution.png'
+			final_consensus = 'all_consensus_sequences/' + filename + '_consensus.fasta'
+			profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
+			emitted_alignment = 'hmm_emitted_alignments/' + filename + '_hmmalignment.sto'
+			emitted_alignment_fasta = 'hmm_emitted_alignments/' + filename + '_hmmalignment.fasta'
+			aligned_cs = 'aligned_consensuses/' + filename + '_consensus_aligned.fasta'
+			perc_idens = 'resources/percentage_identities_file'
 
-	iteration = 1
-	#exit conditions
-	#if number of sequences < 100
-	#if length of alignment does not change in subsequent iterations
-	#if length of alignment becomes to small i.e -15 the desired length (mode length)
-	loa = 0
-	try:
+			sequence_lengths = sequence_length_list(out_file)
+			x = [i for i in range(len(sequence_lengths))]
+			plt.scatter(x, sequence_lengths)
+			plt.savefig(plot)
 
-		while True:
-			print("ITERATION: " + str(iteration) + '*'*30)
-			#convert aligned write_file to list
-			sequences, name_list = fasta_to_list(write_file)
-			number_of_sequences = len(sequences)
-			length_of_alignment = len(sequences[0])
-			print('LENGTH OF ALIGNMENT = ', length_of_alignment)
-			print(loa, length_of_alignment, 'COMPARING LOAs')
+			mode = mode_of_list(sequence_lengths)[0]
+			try:
+				alignment(option, out_file, write_file)
+			except Exception as e:
+				print('Exception: ' + str(e))
+				continue
 
-			if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
-				copyfile(write_file, refined_alignment)
-				f = open(final_consensus, 'w')
-				f.write('>consensus-from-refined_alignment' + '\n')
-				f.write(cs + '\n')
-				cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
-				os.system(cwd)
-				N = len(sequences)
-				cwd = 'hmmemit -N ' + str(N) + ' -o ' + emitted_alignment + ' -a ' + profile_hmm
-				os.system(cwd)
-				stockholm_to_fasta(emitted_alignment, emitted_alignment_fasta)
-				hmm_sequences, hmm_headers = fasta_to_list(emitted_alignment_fasta)
-				hmm_pm = profile_matrix(hmm_sequences)
-				hmm_cs = consensus_sequence(hmm_sequences, hmm_pm)
-				f.write('>consensus-from-emitted_alignment' + '\n')
-				f.write(hmm_cs + '\n')
-				f.close()
-				alignment(option, final_consensus, aligned_cs)
-				pi = percentage_identity(aligned_cs)
-				print(pi, 'PERCENTAGE IDENTITY OF THE TWO CONSENSUSES')
-				break
+			iteration = 1
+			#exit conditions
+			#if number of sequences < 100
+			#if length of alignment does not change in subsequent iterations
+			#if length of alignment becomes to small i.e -15 the desired length (mode length)
+			loa = 0
+			try:
 
-			pm = profile_matrix(sequences)
-			cs = consensus_sequence(sequences, pm)
+				while True:
+					print("ITERATION: " + str(iteration) + '*'*30)
+					#convert aligned write_file to list
+					sequences, name_list = fasta_to_list(write_file)
+					number_of_sequences = len(sequences)
+					length_of_alignment = len(sequences[0])
+					print('LENGTH OF ALIGNMENT = ', length_of_alignment)
+					print(loa, length_of_alignment, 'COMPARING LOAs')
 
-			print(cs, len(cs), 'CONSENSUS FROM REFINED ALIGNMENT')
+					if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
+						copyfile(write_file, refined_alignment)
+						f = open(final_consensus, 'w')
+						f.write('>consensus-from-refined_alignment' + '\n')
+						f.write(cs + '\n')
+						cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
+						os.system(cwd)
+						N = len(sequences)
+						cwd = 'hmmemit -N ' + str(N) + ' -o ' + emitted_alignment + ' -a ' + profile_hmm
+						os.system(cwd)
+						stockholm_to_fasta(emitted_alignment, emitted_alignment_fasta)
+						hmm_sequences, hmm_headers = fasta_to_list(emitted_alignment_fasta)
+						hmm_pm = profile_matrix(hmm_sequences)
+						hmm_cs = consensus_sequence(hmm_sequences, hmm_pm)
+						f.write('>consensus-from-emitted_alignment' + '\n')
+						f.write(hmm_cs + '\n')
+						f.close()
+						alignment(option, final_consensus, aligned_cs)
+						pi = percentage_identity(aligned_cs)
+						print(pi, 'PERCENTAGE IDENTITY OF THE TWO CONSENSUSES')
+						my_dict = store_retrieve_identity_dict(filename, pi, perc_idens)
+						plot_dict_key_and_value(my_dict)
+						break
 
-			bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-			sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-			list_to_fasta(sequences, name_list, temp_file)
+					pm = profile_matrix(sequences)
+					cs = consensus_sequence(sequences, pm)
 
-			#remove dashes to make file ready for new alignment
-			remove_dashes(temp_file, out_file)
-			alignment(option, out_file, write_file)
-			loa = copy.deepcopy(length_of_alignment)
-			iteration += 1
+					print(cs, len(cs), 'CONSENSUS FROM REFINED ALIGNMENT')
 
-	except Exception as e:
-		print('Exception: ' + e)
+					bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
+					sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+					list_to_fasta(sequences, name_list, temp_file)
 
-	print('***********Final Consensus Sequence from refined alignment: ')
-	print(cs)
-	print('***********Final Consensus Sequence from hmm emitted alignment: ')
-	print(hmm_cs)
-	end = time.time() - start
-	print('It took ' + str(end) + ' seconds to run the script')
-	
+					#remove dashes to make file ready for new alignment
+					remove_dashes(temp_file, out_file)
+					alignment(option, out_file, write_file)
+					loa = copy.deepcopy(length_of_alignment)
+					iteration += 1
+
+			except Exception as e:
+				print('Exception: ' + str(e))
+
+			print('***********Final Consensus Sequence from refined alignment: ')
+			print(cs)
+			print('***********Final Consensus Sequence from hmm emitted alignment: ')
+			print(hmm_cs)
+			end = time.time() - start
+			print('It took ' + str(end) + ' seconds to run the script')
+			print('\n\n\n')
+			print('Time for next protein family/domain/motif\n')
+			time.sleep(5)
+
 if __name__ == '__main__':
     main()
