@@ -10,6 +10,8 @@ from shutil import copyfile
 import json
 from os import path
 import pandas as pd
+from ugly_strings import *
+import subprocess
 
 start = time.time()
 
@@ -190,6 +192,15 @@ def stockholm_to_fasta(ifile, ofile):
 			SeqIO.write(sequences, ofile, 'fasta')
 	os.system('rm -rf ' + ifile)
 
+def fasta_to_plain(accession, filename):
+	alignment = AlignIO.read(open(filename, 'fasta'))
+	sequences = [record.seq for record in alignment]
+	plain_file = 'temp_files/' + accession + '_refined_noheader.txt'
+	with open(plain_file, 'w') as f:
+		for seq in sequences:
+			f.write(str(seq))
+			f.write('\n')
+
 #Percent Identity = (Matches x 100)/Length of aligned region (with gaps)
 def percentage_identity(consensus_fasta):
 	seqs, head = fasta_to_list(consensus_fasta)
@@ -221,7 +232,7 @@ def plot_dict_key_and_value(my_dict):
 	df = pd.DataFrame({'Accession' : accessions, '% Identity' : pi_values})
 	ax = df.plot.bar(x = 'Accession', y = '% Identity', rot = 0,  stacked = True, colormap = 'Paired')
 	fig = ax.get_figure()
-	fig.savefig('resources/pi_plot.png')
+	fig.savefig('temp_files/pi_plot.png')
 
 def alignment(option, in_file, out_file):
 	if option == '1':
@@ -234,20 +245,41 @@ def alignment(option, in_file, out_file):
 		print('Invalid Option')
 		sys.exit()
 
+def realign(option, original_alignment, hmm_sequences, out_file):
+	if option == '2':
+		cwd = 'mafft --reorder --keeplength --mapout --addlong ' + hmm_sequences + ' --auto ' + original_alignment  + ' > ' + out_file
+		os.system(cwd)
+		'''
+		with open(out_file, 'w') as fout:
+			for line in output:
+				fout.write(line)
+		'''
+	else:
+		print('Invalid input')
+		sys.exit()
+
+def refine_filename(ip):
+	ip = str(ip, 'utf-8')
+	ip = ip.strip('\n')
+	ip = ip.replace('./', '')
+	return ip
+
 def main():
 
 	accession_list = []
-	with open('resources/accession_list.txt', 'r') as f:
+	with open('temp_files/accession_list.txt', 'r') as f:
 		for line in f:
 			accession_list.append(line.strip('\n'))
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
-	option = input()
-	write_file = 'resources/write.fasta'
-	out_file = 'resources/output.fasta'
-	temp_file = 'resources/temp.fasta'
+	#option = input()
+	option = '2' #using only MAFFT for now
+	write_file, out_file, temp_file, perc_idens = common_files()
 
 	for accession in accession_list:
+		plot = 'dca_energies/' + accession + '_dca_energies.png'
+		if path.exists(plot):
+			continue
 		my_file = 'pfam_entries/' + accession + '.fasta'
 		if path.exists(my_file):
 
@@ -272,14 +304,7 @@ def main():
 				print('Exception: ' + str(e))
 				continue
 
-			refined_alignment = 'refined_alignments/' + filename + '_refined.fasta'
-			plot = 'length_distributions/' + filename + '_length_distribution.png'
-			final_consensus = 'all_consensus_sequences/' + filename + '_consensus.fasta'
-			profile_hmm = 'hmm_profiles/' + filename + '_profile.hmm'
-			emitted_alignment = 'hmm_emitted_alignments/' + filename + '_hmmalignment.sto'
-			emitted_alignment_fasta = 'hmm_emitted_alignments/' + filename + '_hmmalignment.fasta'
-			aligned_cs = 'aligned_consensuses/' + filename + '_consensus_aligned.fasta'
-			perc_idens = 'resources/percentage_identities_file'
+			refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
 
 			sequence_lengths = sequence_length_list(out_file)
 			x = [i for i in range(len(sequence_lengths))]
@@ -302,13 +327,13 @@ def main():
 			try:
 
 				while True:
-					print("ITERATION: " + str(iteration) + '*'*30)
+					print("Iteration Number: " + str(iteration) + '*'*30)
 					#convert aligned write_file to list
 					sequences, name_list = fasta_to_list(write_file)
 					number_of_sequences = len(sequences)
 					length_of_alignment = len(sequences[0])
-					print('LENGTH OF ALIGNMENT = ', length_of_alignment)
-					print(loa, length_of_alignment, 'COMPARING LOAs')
+					print('Length of Alignment = ', length_of_alignment)
+					print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
 
 					if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
 						copyfile(write_file, refined_alignment)
@@ -317,27 +342,29 @@ def main():
 						f.write(cs + '\n')
 						cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
 						os.system(cwd)
-						N = len(sequences)
-						cwd = 'hmmemit -N ' + str(N) + ' -o ' + emitted_alignment + ' -a ' + profile_hmm
+						N = number_of_sequences
+						L = length_of_alignment
+						cwd = 'hmmemit -N ' + str(N) + ' -o ' + hmm_emitted_sequences + '-L' + str(L) + '-p ' + profile_hmm
 						os.system(cwd)
-						stockholm_to_fasta(emitted_alignment, emitted_alignment_fasta)
-						hmm_sequences, hmm_headers = fasta_to_list(emitted_alignment_fasta)
-						hmm_pm = profile_matrix(hmm_sequences)
-						hmm_cs = consensus_sequence(hmm_sequences, hmm_pm)
-						f.write('>consensus-from-emitted_alignment' + '\n')
-						f.write(hmm_cs + '\n')
-						f.close()
-						alignment(option, final_consensus, aligned_cs)
-						pi = percentage_identity(aligned_cs)
-						print(pi, 'PERCENTAGE IDENTITY OF THE TWO CONSENSUSES')
-						my_dict = store_retrieve_identity_dict(filename, pi, perc_idens)
-						plot_dict_key_and_value(my_dict)
+						os.chdir('/media/Data/consensus/hmm_emitted_sequences')
+						cwd = 'find | grep ' + filename + '_hmmsequences.fasta'
+						ip = subprocess.check_output(cwd, shell=True)
+						ip = refine_filename(ip)
+						ip = 'hmm_emitted_sequences/' + ip
+						os.chdir('/media/Data/consensus')
+						realign(option, refined_alignment, ip, combined_alignment)
+						os.chdir('/media/Data/consensus/hmm_emitted_sequences')
+						cwd = 'find | grep ' + filename + '*map'
+						find = subprocess.check_output(cwd, shell=True)
+						find = refine_filename(find)
+						os.system('rm -rf ' + find)
+						os.chdir('/media/Data/consensus')
 						break
 
 					pm = profile_matrix(sequences)
 					cs = consensus_sequence(sequences, pm)
 
-					print(cs, len(cs), 'CONSENSUS FROM REFINED ALIGNMENT')
+					print(cs, len(cs), 'Consensus from refined alignment')
 
 					bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
 					sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
@@ -354,8 +381,7 @@ def main():
 
 			print('***********Final Consensus Sequence from refined alignment: ')
 			print(cs)
-			print('***********Final Consensus Sequence from hmm emitted alignment: ')
-			print(hmm_cs)
+		
 			end = time.time() - start
 			print('It took ' + str(end) + ' seconds to run the script')
 			print('\n\n\n')
