@@ -247,13 +247,13 @@ def alignment(option, in_file, out_file):
 
 def realign(option, original_alignment, hmm_sequences, out_file):
 	if option == '2':
-		cwd = 'mafft --reorder --keeplength --mapout --addlong ' + hmm_sequences + ' --auto ' + original_alignment  + ' > ' + out_file
+		cwd = 'mafft --add ' + hmm_sequences + ' --reorder --keeplength ' + original_alignment + ' > ' + out_file
+		#mafft --add new_sequences --reorder existing_alignment > output
 		os.system(cwd)
-		'''
-		with open(out_file, 'w') as fout:
-			for line in output:
-				fout.write(line)
-		'''
+		#op = subprocess.check_output(cwd, shell=True)
+		#with open(out_file, 'w') as fin:
+		#	for line in op:
+		#		fin.write(line)
 	else:
 		print('Invalid input')
 		sys.exit()
@@ -266,10 +266,12 @@ def refine_filename(ip):
 
 def main():
 
-	accession_list = []
-	with open('temp_files/accession_list.txt', 'r') as f:
-		for line in f:
-			accession_list.append(line.strip('\n'))
+	#accession_list = []
+	#with open('temp_files/accession_list.txt', 'r') as f:
+	#	for line in f:
+	#		accession_list.append(line.strip('\n'))
+
+	accession_list = ['PF00167']
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	#option = input()
@@ -293,9 +295,9 @@ def main():
 
 			#####################################
 			#break condition for testing purposes
-			test_seq, test_head = fasta_to_list(write_file)
-			if len(test_seq) > 3000:
-				continue
+			#test_seq, test_head = fasta_to_list(write_file)
+			#if len(test_seq) > 3000:
+			#	continue
 			#####################################
 
 			try:
@@ -328,7 +330,6 @@ def main():
 
 				while True:
 					print("Iteration Number: " + str(iteration) + '*'*30)
-					#convert aligned write_file to list
 					sequences, name_list = fasta_to_list(write_file)
 					number_of_sequences = len(sequences)
 					length_of_alignment = len(sequences[0])
@@ -353,12 +354,12 @@ def main():
 						ip = 'hmm_emitted_sequences/' + ip
 						os.chdir('/media/Data/consensus')
 						realign(option, refined_alignment, ip, combined_alignment)
-						os.chdir('/media/Data/consensus/hmm_emitted_sequences')
-						cwd = 'find | grep ' + filename + '*map'
-						find = subprocess.check_output(cwd, shell=True)
-						find = refine_filename(find)
-						os.system('rm -rf ' + find)
-						os.chdir('/media/Data/consensus')
+						#os.chdir('/media/Data/consensus/hmm_emitted_sequences')
+						#cwd = 'find | grep ' + filename + '*p'
+						#find = subprocess.check_output(cwd, shell=True)
+						#find = refine_filename(find)
+						#os.system('rm -rf ' + find)
+						#os.chdir('/media/Data/consensus')
 						break
 
 					pm = profile_matrix(sequences)
@@ -378,6 +379,8 @@ def main():
 
 			except Exception as e:
 				print('Exception: ' + str(e))
+				time.sleep(5)
+				continue
 
 			print('***********Final Consensus Sequence from refined alignment: ')
 			print(cs)

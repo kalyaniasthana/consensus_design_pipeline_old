@@ -60,7 +60,7 @@ def accession_list():
 				except:
 					continue
 
-	with open('resources/accession_list.txt', 'w') as f:
+	with open('temp_files/accession_list.txt', 'w') as f:
 		for i in accession_with_size:
 			f.write(str(i) +"\n")
 
@@ -96,23 +96,14 @@ def download_entries(accession_with_size):
 		else:
 			return
 
-def test():
-    os.chdir('/media/Data/consensus/pfam_entries')
-    files = os.listdir('.')
-    for x in files:
-        with open(x, "r") as inputFile:
-            content = inputFile.read()
-        with open(x, "wb") as outputFile:
-            outputFile.write(content.upper())
-
 def main():
-	#accession_list()
-	#sys.exit()
+
+	print('If you think that you have enough families downloaded then just press Ctrl + Z and stop the script :)')
 	accession_with_size = []
-	with open('resources/accession_list.txt', 'r') as f:
+	with open('temp_files/accession_list.txt', 'r') as f:
 		for line in f:
 			accession_with_size.append(line.strip('\n'))
-	#print(accession_with_size, len(accession_with_size))
+
 	dict_size = len(accession_with_size)
 	while True:
 		download_entries(accession_with_size)
@@ -121,7 +112,7 @@ def main():
 		if dict_size == size_of_directory:
 			break
 	print('Download Complete!')
-	return
+	sys.exit()
 
 if __name__ == '__main__':
     main()
