@@ -345,7 +345,7 @@ def main():
 						os.system(cwd)
 						N = number_of_sequences
 						L = length_of_alignment
-						cwd = 'hmmemit -N ' + str(N) + ' -o ' + hmm_emitted_sequences + '-L' + str(L) + '-p ' + profile_hmm
+						cwd = 'hmmemit -N ' + str(N) + ' -o ' + hmm_emitted_sequences + '-L' + str(L) + ' ' + profile_hmm
 						os.system(cwd)
 						os.chdir('/media/Data/consensus/hmm_emitted_sequences')
 						cwd = 'find | grep ' + filename + '_hmmsequences.fasta'

@@ -54,7 +54,7 @@ def read_fields():
 def train_test_partition(train_file, test_file, main_file):
 	sequences, headers = fasta_to_list(main_file)
 	nos = len(sequences)
-	no_train = int(0.2*nos)
+	no_train = int(0.3*nos)
 	no_test = nos - no_train
 	counter = 0
 	with open(main_file, 'r') as fin:
@@ -136,10 +136,11 @@ def main():
 
 	print(sequence_energies_from_hmm_alignment)
 	print('\n\n')
-
-	bins = np.linspace(-5000, 1000)
-	plt.hist(test_sequence_energies_refined_alignment, bins, alpha = 0.5, label = 'test sequences from refined MSA')
-	plt.hist(sequence_energies_from_hmm_alignment, bins, alpha = 0.5, label = 'sequences emitted from profile hmm')
+	minimum = min([min(test_sequence_energies_refined_alignment), min(sequence_energies_from_hmm_alignment)]) - 1000
+	maximum = max([max(test_sequence_energies_refined_alignment), max(sequence_energies_from_hmm_alignment)]) + 1000
+	bins = np.linspace(minimum, maximum)
+	plt.hist(test_sequence_energies_refined_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'test sequences from refined MSA')
+	plt.hist(sequence_energies_from_hmm_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'sequences emitted from profile hmm')
 	plt.legend(loc = 'upper right')
 	plt.savefig(dca_energy_plot)
 	plt.show()
