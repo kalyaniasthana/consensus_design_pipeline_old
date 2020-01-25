@@ -2,6 +2,7 @@ import sys
 import os
 sys.path.insert(1, '../')
 from consensus import *
+from ugly_strings import *
 import pandas as pd
 from collections import defaultdict
 import numpy as np
@@ -54,7 +55,7 @@ def read_fields():
 def train_test_partition(train_file, test_file, main_file):
 	sequences, headers = fasta_to_list(main_file)
 	nos = len(sequences)
-	no_train = int(0.3*nos)
+	no_train = int(1*nos)
 	no_test = nos - no_train
 	counter = 0
 	with open(main_file, 'r') as fin:
@@ -69,7 +70,7 @@ def train_test_partition(train_file, test_file, main_file):
 						fout_2.write(line)
 
 def energy_function(sequence, couplings, fields):
-	negative_bh = 0
+	energy = 0
 	sequence_length = len(sequence)
 	for i in range(sequence_length):
 		aa_i = sequence[i].upper()
@@ -78,7 +79,9 @@ def energy_function(sequence, couplings, fields):
 		if aa_i not in mappings:
 			continue
 		aa_i_no = mappings[aa_i]
-		negative_bh += fields[(i+1, aa_i_no)]
+		val = fields[(i+1, aa_i_no)]
+		#print(val, 'field', aa_i, aa_i_no)
+		energy += val
 		for j in range(i+1, sequence_length):
 			aa_j = sequence[j].upper()
 			if aa_j == '-':
@@ -86,9 +89,11 @@ def energy_function(sequence, couplings, fields):
 			if aa_j not in mappings:
 				continue
 			aa_j_no = mappings[aa_j]
-			negative_bh += couplings[(i+1, j+1, aa_i_no, aa_j_no)]
+			val = couplings[(i+1, j+1, aa_i_no, aa_j_no)]
+			#print(val, 'coupling', aa_i, aa_i_no, aa_j, aa_j_no)
+			energy += val
 
-	return negative_bh
+	return energy
 
 def split_combined_alignment(combined_alignment, only_refined, only_hmm):
 	refined = []
@@ -104,48 +109,89 @@ def split_combined_alignment(combined_alignment, only_refined, only_hmm):
 	SeqIO.write(refined, only_refined, 'fasta')
 	SeqIO.write(hmm, only_hmm, 'fasta')
 
+def sequence_energies_loop(sequences, couplings, fields):
+	energy_list = []
+	for sequence in sequences:
+		e = energy_function(sequence, couplings, fields)
+		energy_list.append(e)
+
+	return energy_list
+
+def percentage_identity(refined_consensus, hmm_consensus):
+	matches = 0
+	seq_length = len(refined_consensus)
+	for i in range(seq_length):
+		if refined_consensus[i] == hmm_consensus[i]:
+			matches += 1
+
+	pi = (matches*100)/seq_length
+	return pi
+
 def main():
 	filename = 'PF00167'
-	combined_file = '../combined_alignments/' + filename + '_combined.fasta'
-	train_file = '../temp_files/train_file.fasta'
-	test_file = '../temp_files/test_file.fasta'
-	only_refined = '../temp_files/only_refined_sequences.fasta'
-	only_hmm = '../temp_files/only_hmm_emitted.fasta'
-	dca_energy_plot = '../dca_energy_plots/' + filename + '_dca_energies.png'
+	combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
 
 	split_combined_alignment(combined_file, only_refined, only_hmm)
 	train_test_partition(train_file, test_file, only_refined)
-	
 	mfdca_compute_params(train_file)
+
 	couplings = read_couplings()
 	fields = read_fields()
 
-	test_sequences, test_headers = fasta_to_list(test_file)
-	test_sequence_energies_refined_alignment = []
-	for sequence in test_sequences:
-		e = energy_function(sequence, couplings, fields)
-		test_sequence_energies_refined_alignment.append(e)
-
-	print(test_sequence_energies_refined_alignment)
-	print('\n\n')
 	hmm_sequences, hmm_headers = fasta_to_list(only_hmm)
-	sequence_energies_from_hmm_alignment = []
-	for sequence in hmm_sequences:
-		e = energy_function(sequence, couplings, fields)
-		sequence_energies_from_hmm_alignment.append(e)
-
+	sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
 	print(sequence_energies_from_hmm_alignment)
 	print('\n\n')
-	minimum = min([min(test_sequence_energies_refined_alignment), min(sequence_energies_from_hmm_alignment)]) - 1000
-	maximum = max([max(test_sequence_energies_refined_alignment), max(sequence_energies_from_hmm_alignment)]) + 1000
+
+	training_sequences, training_headers = fasta_to_list(train_file)
+	sequence_energies_from_training_sequences = sequence_energies_loop(training_sequences, couplings, fields)
+	print(sequence_energies_from_training_sequences)
+	print('\n\n')
+
+	consensus_seq, consensus_header = fasta_to_list(consensus_file)
+	consensus_seq = consensus_seq[0]
+	#consensus_energy = energy_function(consensus_seq, couplings, fields)
+
+	hmm_pm = profile_matrix(hmm_sequences)
+	hmm_consensus = consensus_sequence(hmm_sequences, hmm_pm)
+	#hmm_consensus_energy = energy_function(hmm_consensus, couplings, fields)
+	hmm_header = '>consensus-from-hmm-emitted-sequences'
+
+	cons_seqs, cons_headers = fasta_to_list(consensus_file)
+	if hmm_header[1: ] not in cons_headers:
+		with open(consensus_file, 'a') as fin:
+			fin.write(hmm_header)
+			fin.write('\n')
+			fin.write(hmm_consensus)
+			fin.write('\n')
+
+	option = '2'
+	realign(option, combined_file, consensus_file, combined_with_consensus)
+
+	for record in SeqIO.parse(combined_with_consensus, 'fasta'):
+		#print(record.id)
+		if record.id == 'consensus-from-hmm-emitted-sequences':
+			hmm_consensus_aligned = record.seq
+		elif record.id == 'consensus-from-refined-alignment':
+			consensus_seq_aligned = record.seq
+
+	consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
+	hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
+
+	minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences)]) - 1000
+	maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences)]) + 1000
 	bins = np.linspace(minimum, maximum)
-	plt.hist(test_sequence_energies_refined_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'test sequences from refined MSA')
+	pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
+	print('Percentage Identity of the two consensus sequences: ', pi, '\n')
+
+	plt.hist(sequence_energies_from_training_sequences, alpha = 0.5, edgecolor = 'black', label = 'sequences from refined MSA')
 	plt.hist(sequence_energies_from_hmm_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'sequences emitted from profile hmm')
+	plt.axvline(x = consensus_energy, color = 'red', label = 'consensus sequence from refined MSA')
+	plt.axvline(x = hmm_consensus_energy, color = 'blue', label = 'consensus sequence from hmm sequences')
 	plt.legend(loc = 'upper right')
+	plt.xlabel('DCA energies')
 	plt.savefig(dca_energy_plot)
-	plt.show()
 
 if __name__ == '__main__':
 	main()
-
 

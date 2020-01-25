@@ -339,7 +339,7 @@ def main():
 					if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
 						copyfile(write_file, refined_alignment)
 						f = open(final_consensus, 'w')
-						f.write('>consensus-from-refined_alignment' + '\n')
+						f.write('>consensus-from-refined-alignment' + '\n')
 						f.write(cs + '\n')
 						cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
 						os.system(cwd)
@@ -354,12 +354,6 @@ def main():
 						ip = 'hmm_emitted_sequences/' + ip
 						os.chdir('/media/Data/consensus')
 						realign(option, refined_alignment, ip, combined_alignment)
-						#os.chdir('/media/Data/consensus/hmm_emitted_sequences')
-						#cwd = 'find | grep ' + filename + '*p'
-						#find = subprocess.check_output(cwd, shell=True)
-						#find = refine_filename(find)
-						#os.system('rm -rf ' + find)
-						#os.chdir('/media/Data/consensus')
 						break
 
 					pm = profile_matrix(sequences)

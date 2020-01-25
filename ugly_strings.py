@@ -15,3 +15,15 @@ def specific_files(filename):
 	hmm_emitted_sequences = 'hmm_emitted_sequences/' + filename + '_hmmsequences.fasta'
 	combined_alignment = 'combined_alignments/' + filename + '_combined.fasta'
 	return refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment
+
+def pydca_strings(filename):
+	combined_file = '../combined_alignments/' + filename + '_combined.fasta'
+	train_file = '../temp_files/train_file.fasta'
+	test_file = '../temp_files/test_file.fasta'
+	#only_refined = '../temp_files/only_refined_sequences.fasta'
+	only_refined = '../refined_alignments/' + filename + '_refined.fasta'
+	only_hmm = '../temp_files/only_hmm_emitted.fasta'
+	dca_energy_plot = '../dca_energy_plots/' + filename + '_dca_energies.png'
+	consensus_file = '../all_consensus_sequences/' + filename + '_consensus.fasta'
+	combined_with_consensus = '../temp_files/combined_with_consensus.fasta'
+	return combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus
