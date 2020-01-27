@@ -271,7 +271,7 @@ def main():
 	#	for line in f:
 	#		accession_list.append(line.strip('\n'))
 
-	accession_list = ['PF00167']
+	accession_list = ['PF00131']
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	#option = input()
