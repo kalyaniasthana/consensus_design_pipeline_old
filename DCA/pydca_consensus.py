@@ -8,7 +8,7 @@ from collections import defaultdict
 import numpy as np
 from Bio import SeqIO
 from matplotlib import pyplot as plt
-from random import randint
+from random import randint, choice
 
 mappings = {'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12, 'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20, '-': 21}
 
@@ -173,8 +173,29 @@ def fisher_yates_shuffling(sequences):
 
 	return shuffled
 
+def fisher_yates_without_dashes(sequences):
+	seq_length = len(sequences[0])
+	shuffled = []
+	for sequence in sequences:
+		seq = list(sequence)
+		rand_list = []
+		for i in range(seq_length):
+			if seq[i] == '-':
+				pass
+			else:
+				rand_list.append(i)
+		for i in rand_list:
+			j = choice(rand_list)
+			temp = seq[i]
+			seq[j] = seq[i]
+			seq[j] = temp
+
+		shuffled.append(''.join(seq))
+
+	return shuffled
+
 def main():
-	filename = 'PF00131'
+	filename = 'PF00167'
 	combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
 
 	split_combined_alignment(combined_file, only_refined, only_hmm)
@@ -183,11 +204,6 @@ def main():
 
 	couplings, loa = read_couplings()
 	fields = read_fields()
-	#analyse_fields(loa, fields)
-	#sys.exit()
-
-	#analyse_couplings(loa, couplings)
-	#sys.exit()
 
 	hmm_sequences, hmm_headers = fasta_to_list(only_hmm)
 	sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
@@ -199,9 +215,6 @@ def main():
 	print(sequence_energies_from_training_sequences)
 	print('\n\n')
 
-	consensus_seq, consensus_header = fasta_to_list(consensus_file)
-	consensus_seq = consensus_seq[0]
-	#consensus_energy = energy_function(consensus_seq, couplings, fields)
 
 	hmm_pm = profile_matrix(hmm_sequences)
 	hmm_consensus = consensus_sequence(hmm_sequences, hmm_pm)
@@ -216,6 +229,10 @@ def main():
 			fin.write(hmm_consensus)
 			fin.write('\n')
 
+	consensus_seq, consensus_header = fasta_to_list(consensus_file)
+	consensus_seq = consensus_seq[0]
+	#consensus_energy = energy_function(consensus_seq, couplings, fields)
+
 	option = '2'
 	realign(option, combined_file, consensus_file, combined_with_consensus)
 
@@ -229,15 +246,7 @@ def main():
 	consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
 	hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
 
-	'''
-	random_sequences_file = '../temp_files/random_sequences.fasta'
-	random_seq, random_headers = fasta_to_list(random_sequences_file)
-	sequence_energies_random_sequences = sequence_energies_loop(random_seq, couplings, fields)
-	print(sequence_energies_random_sequences)
-	print('\n\n')
-	'''
-
-	shuffled_sequences = fisher_yates_shuffling(training_sequences)
+	shuffled_sequences = fisher_yates_without_dashes(training_sequences)
 	sequence_energies_from_shuffled_sequences = sequence_energies_loop(shuffled_sequences, couplings, fields)
 	print(sequence_energies_from_shuffled_sequences)
 	print('\n\n')
