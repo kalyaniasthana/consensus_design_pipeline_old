@@ -9,12 +9,37 @@ import numpy as np
 from Bio import SeqIO
 from matplotlib import pyplot as plt
 from random import randint, choice
+import signal
+import subprocess
+from os import listdir
+from os.path import isfile, join
 
-mappings = {'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11, 'N': 12, 'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20, '-': 21}
+mappings = {'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11,
+'N': 12, 'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20, '-': 21}
 
 def mfdca_compute_params(filename):
 	cwd = 'mfdca compute_params protein ../temp_files/train_file.fasta --verbose'
-	os.system(cwd)
+	cwd = cwd.split(' ')
+
+	p = subprocess.Popen(cwd, stdout= subprocess.PIPE, stderr = subprocess.STDOUT)
+
+	while True:
+		line = p.stdout.readline()
+		if not line:
+			break
+		line = str(line, 'utf-8')
+		line = line.strip('\n')
+		print(line)
+
+
+		if 'effective number of sequences' in line:
+			line = line.split('effective number of sequences: ')
+			neffective = float(line[1])
+			if neffective < 100:
+				print('Effective number of sequences is too low')
+				time.sleep(5)
+				break
+
 
 def read_couplings():
 	couplings_filename = 'DCA_output_train_file/couplings_train_file.txt'
@@ -194,78 +219,94 @@ def fisher_yates_without_dashes(sequences):
 
 	return shuffled
 
-def main():
-	filename = 'PF00167'
-	combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
-
-	split_combined_alignment(combined_file, only_refined, only_hmm)
-	train_test_partition(train_file, test_file, only_refined)
-	mfdca_compute_params(train_file)
-
-	couplings, loa = read_couplings()
-	fields = read_fields()
-
-	hmm_sequences, hmm_headers = fasta_to_list(only_hmm)
-	sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
-	print(sequence_energies_from_hmm_alignment)
-	print('\n\n')
-
-	training_sequences, training_headers = fasta_to_list(train_file)
-	sequence_energies_from_training_sequences = sequence_energies_loop(training_sequences, couplings, fields)
-	print(sequence_energies_from_training_sequences)
-	print('\n\n')
-
-
-	hmm_pm = profile_matrix(hmm_sequences)
-	hmm_consensus = consensus_sequence(hmm_sequences, hmm_pm)
-	#hmm_consensus_energy = energy_function(hmm_consensus, couplings, fields)
-	hmm_header = '>consensus-from-hmm-emitted-sequences'
-
-	cons_seqs, cons_headers = fasta_to_list(consensus_file)
-	if hmm_header[1: ] not in cons_headers:
-		with open(consensus_file, 'a') as fin:
-			fin.write(hmm_header)
-			fin.write('\n')
-			fin.write(hmm_consensus)
-			fin.write('\n')
-
-	consensus_seq, consensus_header = fasta_to_list(consensus_file)
-	consensus_seq = consensus_seq[0]
-	#consensus_energy = energy_function(consensus_seq, couplings, fields)
-
-	option = '2'
-	realign(option, combined_file, consensus_file, combined_with_consensus)
-
-	for record in SeqIO.parse(combined_with_consensus, 'fasta'):
-		#print(record.id)
-		if record.id == 'consensus-from-hmm-emitted-sequences':
-			hmm_consensus_aligned = record.seq
-		elif record.id == 'consensus-from-refined-alignment':
-			consensus_seq_aligned = record.seq
-
-	consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
-	hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
-
-	shuffled_sequences = fisher_yates_without_dashes(training_sequences)
-	sequence_energies_from_shuffled_sequences = sequence_energies_loop(shuffled_sequences, couplings, fields)
-	print(sequence_energies_from_shuffled_sequences)
-	print('\n\n')
-
-	minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences), min(sequence_energies_from_shuffled_sequences)]) - 1000
-	maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences), max(sequence_energies_from_shuffled_sequences)]) + 1000
-	bins = np.linspace(minimum, maximum)
-	pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
-	print('Percentage Identity of the two consensus sequences: ', pi, '\n')
+def plot_energies(
+        sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, sequence_energies_from_shuffled_sequences,
+        consensus_energy, hmm_consensus_energy, bins, dca_energy_plot
+    ):
 
 	plt.hist(sequence_energies_from_training_sequences, alpha = 0.5, edgecolor = 'black', label = 'sequences from refined MSA')
 	plt.hist(sequence_energies_from_hmm_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'sequences emitted from profile hmm')
-	#plt.hist(sequence_energies_random_sequences, alpha = 0.5, edgecolor = 'black', label = 'sequence energies from random sequences')
 	plt.hist(sequence_energies_from_shuffled_sequences, alpha = 0.5, edgecolor = 'black', label = 'shuffled sequences')
 	plt.axvline(x = consensus_energy, color = 'red', label = 'consensus sequence from refined MSA')
 	plt.axvline(x = hmm_consensus_energy, color = 'blue', label = 'consensus sequence from hmm sequences')
 	plt.legend(loc = 'upper right')
 	plt.xlabel('DCA energies')
 	plt.savefig(dca_energy_plot)
+
+
+def main():
+
+	mypath = '../all_consensus_sequences'
+	all_files = [f for f in listdir(mypath) if isfile(join(mypath, f))]
+	all_files = [f[: -16] for f in all_files]
+
+	for filename in all_files:
+		print(filename, '  ', '*'*30)
+
+		combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
+
+		if os.stat(consensus_file).st_size == 0 or os.stat(combined_file) == 0:
+			print('Some files are missing!')
+			continue
+
+		if path.exists(dca_energy_plot) and os.stat(dca_energy_plot).st_size != 0:
+			print('Already calculated!')
+			continue
+
+		split_combined_alignment(combined_file, only_refined, only_hmm)
+		train_test_partition(train_file, test_file, only_refined)
+		mfdca_compute_params(train_file)
+
+		couplings, loa = read_couplings()
+		fields = read_fields()
+
+		hmm_sequences, hmm_headers = fasta_to_list(only_hmm)
+		sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
+
+		training_sequences, training_headers = fasta_to_list(train_file)
+		sequence_energies_from_training_sequences = sequence_energies_loop(training_sequences, couplings, fields)
+
+		hmm_pm = profile_matrix(hmm_sequences)
+		hmm_consensus = consensus_sequence(hmm_sequences, hmm_pm)
+		hmm_header = '>consensus-from-hmm-emitted-sequences'
+
+		cons_seqs, cons_headers = fasta_to_list(consensus_file)
+		if hmm_header[1: ] not in cons_headers:
+			with open(consensus_file, 'a') as fin:
+				fin.write(hmm_header)
+				fin.write('\n')
+				fin.write(hmm_consensus)
+				fin.write('\n')
+
+		consensus_seq, consensus_header = fasta_to_list(consensus_file)
+		consensus_seq = consensus_seq[0]
+
+		option = '2'
+		realign(option, combined_file, consensus_file, combined_with_consensus)
+
+		for record in SeqIO.parse(combined_with_consensus, 'fasta'):
+			#print(record.id)
+			if record.id == 'consensus-from-hmm-emitted-sequences':
+				hmm_consensus_aligned = record.seq
+			elif record.id == 'consensus-from-refined-alignment':
+				consensus_seq_aligned = record.seq
+
+		consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
+		hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
+
+		shuffled_sequences = fisher_yates_without_dashes(training_sequences)
+		sequence_energies_from_shuffled_sequences = sequence_energies_loop(shuffled_sequences, couplings, fields)
+
+		minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences),
+			min(sequence_energies_from_shuffled_sequences)]) - 1000
+		maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences),
+			max(sequence_energies_from_shuffled_sequences)]) + 1000
+		bins = np.linspace(minimum, maximum)
+		pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
+		print('Percentage Identity of the two consensus sequences: ', pi, '\n')
+
+		plot_energies(sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, 
+			sequence_energies_from_shuffled_sequences, consensus_energy, hmm_consensus_energy, bins, dca_energy_plot)
 
 if __name__ == '__main__':
 	main()
