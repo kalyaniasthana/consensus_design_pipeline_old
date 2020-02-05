@@ -1,0 +1,3 @@
+[console_scripts]
+mfdca = pydca.main:run_meanfield_dca
+

@@ -265,13 +265,10 @@ def refine_filename(ip):
 	return ip
 
 def main():
-
-	#accession_list = []
-	#with open('temp_files/accession_list.txt', 'r') as f:
-	#	for line in f:
-	#		accession_list.append(line.strip('\n'))
-
-	accession_list = ['PF00131']
+	accession_list = []
+	with open('temp_files/accession_list.txt', 'r') as f:
+		for line in f:
+			accession_list.append(line.strip('\n'))
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	#option = input()
@@ -279,26 +276,24 @@ def main():
 	write_file, out_file, temp_file, perc_idens = common_files()
 
 	for accession in accession_list:
-		plot = 'dca_energies/' + accession + '_dca_energies.png'
+		plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
 		if path.exists(plot):
 			continue
-		my_file = 'pfam_entries/' + accession + '.fasta'
+
+		my_file = 'families/' + accession + '.fasta'
 		if path.exists(my_file):
 
 			#0th iteration 
 			filename = accession
 			print(filename, '%'*30)
-			file = 'pfam_entries/' + filename + '.fasta'
+			file = 'families/' + filename + '.fasta'
 			copyfile(file, temp_file)
 			remove_dashes(temp_file, write_file)
 			my_dict = {}
 
-			#####################################
-			#break condition for testing purposes
-			#test_seq, test_head = fasta_to_list(write_file)
-			#if len(test_seq) > 3000:
-			#	continue
-			#####################################
+			test_seq, test_head = fasta_to_list(write_file)
+			if len(test_seq) > 10000:
+				continue
 
 			try:
 				cdhit(write_file, out_file)
@@ -332,11 +327,15 @@ def main():
 					print("Iteration Number: " + str(iteration) + '*'*30)
 					sequences, name_list = fasta_to_list(write_file)
 					number_of_sequences = len(sequences)
+					if number_of_sequences < 500:
+						print('Existing...familiy is too small !!!')
+						break
+
 					length_of_alignment = len(sequences[0])
 					print('Length of Alignment = ', length_of_alignment)
 					print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
 
-					if number_of_sequences < 100 or length_of_alignment < mode - 15 or loa == length_of_alignment:
+					if number_of_sequences < 500 or length_of_alignment < mode - 15 or loa == length_of_alignment:
 						copyfile(write_file, refined_alignment)
 						f = open(final_consensus, 'w')
 						f.write('>consensus-from-refined-alignment' + '\n')
@@ -354,6 +353,9 @@ def main():
 						ip = 'hmm_emitted_sequences/' + ip
 						os.chdir('/media/Data/consensus')
 						realign(option, refined_alignment, ip, combined_alignment)
+						print('***********Final Consensus Sequence from refined alignment: ')
+						print(cs)
+
 						break
 
 					pm = profile_matrix(sequences)
@@ -375,9 +377,6 @@ def main():
 				print('Exception: ' + str(e))
 				time.sleep(5)
 				continue
-
-			print('***********Final Consensus Sequence from refined alignment: ')
-			print(cs)
 		
 			end = time.time() - start
 			print('It took ' + str(end) + ' seconds to run the script')
