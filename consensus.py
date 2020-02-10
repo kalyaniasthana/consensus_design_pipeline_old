@@ -3,6 +3,8 @@ import os
 from Bio import SeqIO, AlignIO
 import sys
 from collections import Counter, OrderedDict
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import time
 import copy
@@ -12,6 +14,9 @@ from os import path
 import pandas as pd
 from ugly_strings import *
 import subprocess
+sys.path.insert(1, 'DCA/')
+from pydca_consensus import *
+import threading
 
 start = time.time()
 
@@ -264,125 +269,146 @@ def refine_filename(ip):
 	ip = ip.replace('./', '')
 	return ip
 
-def main():
-	accession_list = []
-	with open('temp_files/accession_list.txt', 'r') as f:
-		for line in f:
-			accession_list.append(line.strip('\n'))
+def main(accession):
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	#option = input()
 	option = '2' #using only MAFFT for now
 	write_file, out_file, temp_file, perc_idens = common_files()
 
-	for accession in accession_list:
-		plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
-		if path.exists(plot):
-			continue
+	#for accession in accession_list:
+	plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
+	if path.exists(plot):
+		return
 
-		my_file = 'families/' + accession + '.fasta'
-		if path.exists(my_file):
+	my_file = 'families/' + accession + '.fasta'
+	if path.exists(my_file):
 
-			#0th iteration 
-			filename = accession
-			print(filename, '%'*30)
-			file = 'families/' + filename + '.fasta'
-			copyfile(file, temp_file)
-			remove_dashes(temp_file, write_file)
-			my_dict = {}
+		#0th iteration 
+		filename = accession
+		print(filename, '%'*30)
+		file = 'families/' + filename + '.fasta'
+		copyfile(file, temp_file)
+		remove_dashes(temp_file, write_file)
+		my_dict = {}
 
-			test_seq, test_head = fasta_to_list(write_file)
-			if len(test_seq) > 10000:
-				continue
+		#test_seq, test_head = fasta_to_list(write_file)
+		#if len(test_seq) > 10000:
+		#	return
 
-			try:
-				cdhit(write_file, out_file)
-			except Exception as e:
-				print('Exception: ' + str(e))
-				continue
+		try:
+			cdhit(write_file, out_file)
+		except Exception as e:
+			print('Exception: ' + str(e))
+			return
 
-			refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
+		refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
 
-			sequence_lengths = sequence_length_list(out_file)
-			x = [i for i in range(len(sequence_lengths))]
-			plt.scatter(x, sequence_lengths)
-			plt.savefig(plot)
+		sequence_lengths = sequence_length_list(out_file)
+		x = [i for i in range(len(sequence_lengths))]
+		plt.scatter(x, sequence_lengths)
+		plt.savefig(plot)
+		plt.clf()
+		plt.cla()
+		plt.close()
 
-			mode = mode_of_list(sequence_lengths)[0]
-			try:
+		mode = mode_of_list(sequence_lengths)[0]
+		try:
+			alignment(option, out_file, write_file)
+		except Exception as e:
+			print('Exception: ' + str(e))
+			return
+
+		iteration = 1
+		#exit conditions
+		#if number of sequences < 100
+		#if length of alignment does not change in subsequent iterations
+		#if length of alignment becomes to small i.e -15 the desired length (mode length)
+		loa = 0
+		try:
+
+			while True:
+				print("Iteration Number: " + str(iteration) + '*'*30)
+				sequences, name_list = fasta_to_list(write_file)
+				number_of_sequences = len(sequences)
+				if number_of_sequences < 500:
+					print('Existing...familiy is too small !!!')
+					break
+
+				length_of_alignment = len(sequences[0])
+				print('Length of Alignment = ', length_of_alignment)
+				print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
+
+				if number_of_sequences < 500 or length_of_alignment < mode - 15 or loa == length_of_alignment:
+					copyfile(write_file, refined_alignment)
+					f = open(final_consensus, 'w')
+					f.write('>consensus-from-refined-alignment' + '\n')
+					f.write(cs + '\n')
+					cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
+					os.system(cwd)
+					N = number_of_sequences
+					L = length_of_alignment
+					cwd = 'hmmemit -N ' + str(N) + ' -o ' + hmm_emitted_sequences + '-L' + str(L) + ' ' + profile_hmm
+					os.system(cwd)
+					os.chdir('/media/Data/consensus/hmm_emitted_sequences')
+					cwd = 'find | grep ' + filename + '_hmmsequences.fasta'
+					ip = subprocess.check_output(cwd, shell=True)
+					ip = refine_filename(ip)
+					ip = 'hmm_emitted_sequences/' + ip
+					os.chdir('/media/Data/consensus')
+					realign(option, refined_alignment, ip, combined_alignment)
+					print('***********Final Consensus Sequence from refined alignment: ')
+					print(cs)
+
+					break
+
+				pm = profile_matrix(sequences)
+				cs = consensus_sequence(sequences, pm)
+
+				print(cs, len(cs), 'Consensus from refined alignment')
+
+				bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
+				sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
+				list_to_fasta(sequences, name_list, temp_file)
+
+				#remove dashes to make file ready for new alignment
+				remove_dashes(temp_file, out_file)
 				alignment(option, out_file, write_file)
-			except Exception as e:
-				print('Exception: ' + str(e))
-				continue
+				loa = copy.deepcopy(length_of_alignment)
+				iteration += 1
 
-			iteration = 1
-			#exit conditions
-			#if number of sequences < 100
-			#if length of alignment does not change in subsequent iterations
-			#if length of alignment becomes to small i.e -15 the desired length (mode length)
-			loa = 0
-			try:
-
-				while True:
-					print("Iteration Number: " + str(iteration) + '*'*30)
-					sequences, name_list = fasta_to_list(write_file)
-					number_of_sequences = len(sequences)
-					if number_of_sequences < 500:
-						print('Existing...familiy is too small !!!')
-						break
-
-					length_of_alignment = len(sequences[0])
-					print('Length of Alignment = ', length_of_alignment)
-					print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
-
-					if number_of_sequences < 500 or length_of_alignment < mode - 15 or loa == length_of_alignment:
-						copyfile(write_file, refined_alignment)
-						f = open(final_consensus, 'w')
-						f.write('>consensus-from-refined-alignment' + '\n')
-						f.write(cs + '\n')
-						cwd = 'hmmbuild ' + profile_hmm + ' ' + refined_alignment
-						os.system(cwd)
-						N = number_of_sequences
-						L = length_of_alignment
-						cwd = 'hmmemit -N ' + str(N) + ' -o ' + hmm_emitted_sequences + '-L' + str(L) + ' ' + profile_hmm
-						os.system(cwd)
-						os.chdir('/media/Data/consensus/hmm_emitted_sequences')
-						cwd = 'find | grep ' + filename + '_hmmsequences.fasta'
-						ip = subprocess.check_output(cwd, shell=True)
-						ip = refine_filename(ip)
-						ip = 'hmm_emitted_sequences/' + ip
-						os.chdir('/media/Data/consensus')
-						realign(option, refined_alignment, ip, combined_alignment)
-						print('***********Final Consensus Sequence from refined alignment: ')
-						print(cs)
-
-						break
-
-					pm = profile_matrix(sequences)
-					cs = consensus_sequence(sequences, pm)
-
-					print(cs, len(cs), 'Consensus from refined alignment')
-
-					bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list)
-					sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers)
-					list_to_fasta(sequences, name_list, temp_file)
-
-					#remove dashes to make file ready for new alignment
-					remove_dashes(temp_file, out_file)
-					alignment(option, out_file, write_file)
-					loa = copy.deepcopy(length_of_alignment)
-					iteration += 1
-
-			except Exception as e:
-				print('Exception: ' + str(e))
-				time.sleep(5)
-				continue
-		
-			end = time.time() - start
-			print('It took ' + str(end) + ' seconds to run the script')
-			print('\n\n\n')
-			print('Time for next protein family/domain/motif\n')
+		except Exception as e:
+			print('Exception: ' + str(e))
 			time.sleep(5)
+			return
+	
+		end = time.time() - start
+		print('It took ' + str(end) + ' seconds to run the iterative alignment for: ' + filename)
+		print('\n\n\n')
+		#print('Time for next protein family/domain/motif\n')
+		time.sleep(2)
 
 if __name__ == '__main__':
-    main()
+	accession_list = []
+	with open('temp_files/accession_list.txt', 'r') as f:
+		for line in f:
+			accession_list.append(line.strip('\n'))
+
+	#accession_list = ['PF00167']
+
+	for accession in accession_list:
+		print('Iterative Alignment')
+		time.sleep(2)
+		t1 = threading.Thread(target = main, args = (accession,))
+		t1.setDaemon(True)
+		t1.start()
+		t1.join()
+		os.chdir('/media/Data/consensus/DCA')
+		print('DCA calculation')
+		time.sleep(2)
+		t2 = threading.Thread(target = main_pydca, args = (accession, ))
+		t2.setDaemon(True)
+		t2.start()
+		t2.join()
+		os.chdir('/media/Data/consensus')
+		print(accession, ' DONE!!!!')
