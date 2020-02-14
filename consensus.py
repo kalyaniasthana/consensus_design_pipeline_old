@@ -389,12 +389,12 @@ def main(accession):
 		time.sleep(2)
 
 if __name__ == '__main__':
-	accession_list = []
-	with open('temp_files/accession_list.txt', 'r') as f:
-		for line in f:
-			accession_list.append(line.strip('\n'))
+	#accession_list = []
+	#with open('temp_files/accession_list.txt', 'r') as f:
+	#	for line in f:
+	#		accession_list.append(line.strip('\n'))
 
-	#accession_list = ['PF00167']
+	accession_list = ['PF00167']
 
 	for accession in accession_list:
 		print('Iterative Alignment')
