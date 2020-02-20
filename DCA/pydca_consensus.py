@@ -130,6 +130,38 @@ def energy_function(sequence, couplings, fields):
 			val = fields[(sequence_length, last_aa_no)]
 
 	energy += val
+
+	'''
+	for i in range(sequence_length):
+		aa_i = sequence[i].upper()
+		if aa_i == '-':
+			continue
+		if aa_i not in mappings:
+			continue
+		aa_i_no = mappings[aa_i]
+		try:
+			val = fields[(i+1, aa_i_no)]
+			energy -= val
+		except:
+			continue
+
+		for j in range(sequence_length):
+			aa_j = sequence[j].upper()
+			if i != j:
+				if aa_j == '-':
+					continue
+
+				if aa_j not in mappings:
+					continue
+
+				aa_j_no = mappings[aa_j]
+				try:
+					val = couplings[(i+1, j+1, aa_i_no, aa_j_no)]
+					energy -= val
+				except:
+					continue
+		'''
+
 	return energy
 
 def score_sequence(energy):
@@ -252,6 +284,21 @@ def plot_energies(
 	plt.cla()
 	plt.close()
 
+def write_matlab_script(filename):
+
+	dca_calculation_script = '../martin_dca/dca_energy.m'
+	with open(dca_calculation_script, 'w') as f:
+		f.write("fasta_test = '/media/Data/consensus/temp_files/only_hmm_emitted.fasta';\n")
+		f.write("fasta_train = '/media/Data/consensus/temp_files/train_file.fasta';\n")
+		f.write("accession = " + "'" + filename + "';\n")
+		f.write("[score_train, score_test] = calculate_dca_scores(fasta_train,fasta_test,accession)")
+
+def call_matlab_script():
+	os.chdir('/usr/local/MATLAB/R2016a/bin')
+	cwd = './matlab -softwareopengl -nodesktop -r "run(' + "'/media/Data/consensus/martin_dca/dca_energy.m')" + ';exit;"'
+	os.system(cwd)
+	#os.chdir('../DCA')
+
 def main_pydca(filename):
 
 	combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
@@ -272,6 +319,7 @@ def main_pydca(filename):
 	split_combined_alignment(combined_file, only_refined, only_hmm)
 	train_test_partition(train_file, test_file, only_refined)
 
+	'''
 	try:
 		mfdca_compute_params(train_file)
 	except Exception as e:
@@ -281,23 +329,23 @@ def main_pydca(filename):
 
 	couplings, loa = read_couplings()
 	fields = read_fields()
+	'''
 
 	try:
 
 		hmm_sequences, hmm_headers = fasta_to_list(only_hmm)
-		sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
+		#sequence_energies_from_hmm_alignment = sequence_energies_loop(hmm_sequences, couplings, fields)
 		#print(sequence_energies_from_hmm_alignment)
 		#time.sleep(3)
 		#print('\n')
 
 		training_sequences, training_headers = fasta_to_list(train_file)
-		sequence_energies_from_training_sequences = sequence_energies_loop(training_sequences, couplings, fields)
+		#sequence_energies_from_training_sequences = sequence_energies_loop(training_sequences, couplings, fields)
 		#print(sequence_energies_from_training_sequences)
 		#time.sleep(3)
 
 	except Exception as e:
 		print(e)
-		print('Some problem with energy calculation')
 		return
 
 	hmm_pm = profile_matrix(hmm_sequences)
@@ -321,26 +369,38 @@ def main_pydca(filename):
 	for record in SeqIO.parse(combined_with_consensus, 'fasta'):
 		#print(record.id)
 		if record.id == 'consensus-from-hmm-emitted-sequences':
-			hmm_consensus_aligned = record.seq
+			hmm_consensus_aligned = str(record.seq)
 		elif record.id == 'consensus-from-refined-alignment':
-			consensus_seq_aligned = record.seq
+			consensus_seq_aligned = str(record.seq)
 
-	consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
-	hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
-	print('\n')
-	print(consensus_energy, hmm_consensus_energy)
+	#consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
+	#hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
+	#print('\n')
+	#print(consensus_energy, hmm_consensus_energy)
 
+	#print(consensus_seq_aligned, type(consensus_seq_aligned))
+	#print('\n')
+	#print(hmm_consensus_aligned, type(hmm_consensus_aligned))
+	#rewrite both consensus in the consensus file in the aligned form
+	with open(consensus_file, 'w') as fin:
+		fin.write('>consensus-from-refined-alignment\n')
+		fin.write(consensus_seq_aligned + '\n')
+		fin.write('>consensus-from-hmm-emitted-sequences\n')
+		fin.write(hmm_consensus_aligned)
 	#shuffled_sequences = fisher_yates_without_dashes(training_sequences)
 	#sequence_energies_from_shuffled_sequences = sequence_energies_loop(shuffled_sequences, couplings, fields)
 
-	minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences)]) - 1000
-	maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences)]) + 1000
-	bins = np.linspace(minimum, maximum)
-	pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
-	print('Percentage Identity of the two consensus sequences: ', pi, '\n')
+	#minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences)]) - 1000
+	#maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences)]) + 1000
+	#bins = np.linspace(minimum, maximum)
+	#pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
+	#print('Percentage Identity of the two consensus sequences: ', pi, '\n')
 
-	plot_energies(sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, 
-		consensus_energy, hmm_consensus_energy, bins, dca_energy_plot)
+	#plot_energies(sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, 
+	#	consensus_energy, hmm_consensus_energy, bins, dca_energy_plot)
+
+	write_matlab_script(filename)
+	call_matlab_script()
 
 	end = time.time() - start
 	print('It took ' + str(end) + ' seconds to do DCA calculation for: ' + filename)

@@ -302,6 +302,10 @@ def main(accession):
 			print('Exception: ' + str(e))
 			return
 
+		test_seq, test_head = fasta_to_list(out_file)
+		if len(test_seq) > 5000:
+			return
+
 		refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
 
 		sequence_lengths = sequence_length_list(out_file)
@@ -389,12 +393,11 @@ def main(accession):
 		time.sleep(2)
 
 if __name__ == '__main__':
-	#accession_list = []
-	#with open('temp_files/accession_list.txt', 'r') as f:
-	#	for line in f:
-	#		accession_list.append(line.strip('\n'))
+	accession_list = []
+	with open('temp_files/accession_list.txt', 'r') as f:
+		for line in f:
+			accession_list.append(line.strip('\n'))
 
-	accession_list = ['PF00167']
 
 	for accession in accession_list:
 		print('Iterative Alignment')
