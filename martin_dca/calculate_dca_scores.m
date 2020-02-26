@@ -16,6 +16,8 @@ fprintf('%d', score_consensus(2));
 figure;
 histogram(-score_train, 'Normalization', 'prob', 'BinWidth', 20);
 hold;
+xlimtrain = get(gca, 'xlim');
+file = fopen('/media/Data/consensus/temp_files/exceptions.txt', 'at');
 histogram(-score_test, 'Normalization', 'prob', 'BinWidth', 20);
 hold;
 y1 = get(gca, 'ylim');
@@ -28,5 +30,12 @@ legend('Refined MSA', 'HMM emitted MSA', 'Consensus from Refined MSA', 'Consensu
 plt = strcat('../dca_energy_plots/', accession);
 plot_name = strcat(plt, '_dca_energies');
 print(plot_name, '-dpng');
-
+fprintf('\n\n%d\t', xlimtrain(2));
+fprintf('%d\n\n', -score_consensus(1));
+fprintf('%d\n', xlimtrain(2) > -score_consensus(1));
+if xlimtrain(2) < -score_consensus(1)
+	fprintf(file, '%s\n', accession);
+fclose(file);
+clear eij;
+clear hi;
 end

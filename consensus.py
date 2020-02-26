@@ -269,7 +269,15 @@ def refine_filename(ip):
 	ip = ip.replace('./', '')
 	return ip
 
-def main(accession):
+def remove_accession(copied_accession_file, accession):
+	with open(copied_accession_file, 'r') as f:
+		lines = f.readlines()
+	with open(copied_accession_file, 'w') as f:
+		for line in lines:
+			if line.strip('\n') != accession:
+				f.write(line)
+
+def main(accession, accession_file):
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
 	#option = input()
@@ -279,6 +287,8 @@ def main(accession):
 	#for accession in accession_list:
 	plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
 	if path.exists(plot):
+		remove_accession(accession_file, accession)
+		print('Already calculated')
 		return
 
 	my_file = 'families/' + accession + '.fasta'
@@ -303,7 +313,8 @@ def main(accession):
 			return
 
 		test_seq, test_head = fasta_to_list(out_file)
-		if len(test_seq) > 5000:
+		if len(test_seq) > 5000 or len(test_seq) < 500:
+			print('Too many/Too few sequences')
 			return
 
 		refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
@@ -335,9 +346,9 @@ def main(accession):
 				print("Iteration Number: " + str(iteration) + '*'*30)
 				sequences, name_list = fasta_to_list(write_file)
 				number_of_sequences = len(sequences)
-				if number_of_sequences < 500:
-					print('Existing...familiy is too small !!!')
-					break
+				#if number_of_sequences < 500:
+				#	print('Existing...familiy is too small !!!')
+				#	break
 
 				length_of_alignment = len(sequences[0])
 				print('Length of Alignment = ', length_of_alignment)
@@ -393,8 +404,11 @@ def main(accession):
 		time.sleep(2)
 
 if __name__ == '__main__':
+	original_accession_file = 'temp_files/accession_list.txt'
+	copied_accession_file = 'temp_files/accession_list_copy.txt'
+	copyfile(original_accession_file, copied_accession_file)
 	accession_list = []
-	with open('temp_files/accession_list.txt', 'r') as f:
+	with open(copied_accession_file, 'r') as f:
 		for line in f:
 			accession_list.append(line.strip('\n'))
 
@@ -402,14 +416,14 @@ if __name__ == '__main__':
 	for accession in accession_list:
 		print('Iterative Alignment')
 		time.sleep(2)
-		t1 = threading.Thread(target = main, args = (accession,))
+		t1 = threading.Thread(target = main, args = (accession, copied_accession_file, ))
 		t1.setDaemon(True)
 		t1.start()
 		t1.join()
 		os.chdir('/media/Data/consensus/DCA')
 		print('DCA calculation')
 		time.sleep(2)
-		t2 = threading.Thread(target = main_pydca, args = (accession, ))
+		t2 = threading.Thread(target = main_pydca, args = (accession, copied_accession_file, ))
 		t2.setDaemon(True)
 		t2.start()
 		t2.join()
