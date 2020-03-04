@@ -277,6 +277,7 @@ def remove_accession(copied_accession_file, accession):
 			if line.strip('\n') != accession:
 				f.write(line)
 
+
 def main(accession, accession_file):
 
 	print('1. Clustal Omega 2. MAFFT 3. MUSCLE')
@@ -406,6 +407,8 @@ def main(accession, accession_file):
 if __name__ == '__main__':
 	original_accession_file = 'temp_files/accession_list.txt'
 	copied_accession_file = 'temp_files/accession_list_copy.txt'
+	#original_accession_file = 'temp_files/exceptions.txt'
+	#copied_accession_file = 'temp_files/exceptions_copy.txt'
 	copyfile(original_accession_file, copied_accession_file)
 	accession_list = []
 	with open(copied_accession_file, 'r') as f:
@@ -414,14 +417,14 @@ if __name__ == '__main__':
 
 
 	for accession in accession_list:
-		print('Iterative Alignment')
+		print('Iterative Alignment ', accession)
 		time.sleep(2)
 		t1 = threading.Thread(target = main, args = (accession, copied_accession_file, ))
 		t1.setDaemon(True)
 		t1.start()
 		t1.join()
 		os.chdir('/media/Data/consensus/DCA')
-		print('DCA calculation')
+		print('DCA calculation ', accession)
 		time.sleep(2)
 		t2 = threading.Thread(target = main_pydca, args = (accession, copied_accession_file, ))
 		t2.setDaemon(True)

@@ -12,7 +12,7 @@ cf = strcat('/media/Data/consensus/all_consensus_sequences/', accession);
 consensus_file = strcat(cf, '_consensus.fasta');
 score_consensus = score_fct( consensus_file, eij, hi, N, q);
 fprintf('%d\n', score_consensus(1));
-fprintf('%d', score_consensus(2));
+fprintf('%d\n', score_consensus(2));
 figure;
 histogram(-score_train, 'Normalization', 'prob', 'BinWidth', 20);
 hold;
@@ -30,12 +30,36 @@ legend('Refined MSA', 'HMM emitted MSA', 'Consensus from Refined MSA', 'Consensu
 plt = strcat('../dca_energy_plots/', accession);
 plot_name = strcat(plt, '_dca_energies');
 print(plot_name, '-dpng');
-fprintf('\n\n%d\t', xlimtrain(2));
-fprintf('%d\n\n', -score_consensus(1));
-fprintf('%d\n', xlimtrain(2) > -score_consensus(1));
+%fprintf('\n\n%d\t', xlimtrain(2));
+%fprintf('%d\n\n', -score_consensus(1));
+%fprintf('%d\n', xlimtrain(2) > -score_consensus(1));
 if xlimtrain(2) < -score_consensus(1)
 	fprintf(file, '%s\n', accession);
 fclose(file);
+
+%file = fopen('/media/Data/consensus/temp_files/score_train.txt', 'w');
+%fprintf(file, '%d\n', score_train);
+%fclose(file);
+%file = fopen('/media/Data/consensus/temp_files/score_test.txt', 'w');
+%fprintf(file, '%d\n', score_test);
+%fclose(file);
+
 clear eij;
 clear hi;
+clear plot_name;
+clear plt;
+clear s;
+clear file;
+clear xlimtrain;
+clear score_consensus;
+clear consensus_file;
+clear cf;
+clear score_train;
+clear score_test;
+clear C;
+clear Pi_pcred;
+clear N;
+clear q;
+clear all;
+close all;
 end

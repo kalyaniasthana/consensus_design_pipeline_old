@@ -14,6 +14,7 @@ import subprocess
 from os import listdir
 from os.path import isfile, join
 import time
+from datetime import datetime
 
 start = time.time()
 
@@ -121,7 +122,7 @@ def energy_function(sequence, couplings, fields):
 
 			aa_j_no = mappings[aa_j]
 			val = couplings[(i+1, j+1, aa_i_no, aa_j_no)]
-			energy -= val
+			energy -= val/2
 	
 	last_aa = sequence[sequence_length - 1].upper()
 	if last_aa != '-':
@@ -269,11 +270,11 @@ def fisher_yates_without_dashes(sequences):
 
 def plot_energies(
         sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment,
-        consensus_energy, hmm_consensus_energy, bins, dca_energy_plot
+        consensus_energy, hmm_consensus_energy, bins_refined, bins_hmm, dca_energy_plot
     ):
 
-	plt.hist(sequence_energies_from_training_sequences, alpha = 0.5, edgecolor = 'black', label = 'sequences from refined MSA')
-	plt.hist(sequence_energies_from_hmm_alignment, bins, alpha = 0.5, edgecolor = 'black', label = 'sequences emitted from profile hmm')
+	plt.hist(sequence_energies_from_training_sequences, alpha = 0.5, edgecolor = 'black', label = 'sequences from refined MSA', density = True)
+	plt.hist(sequence_energies_from_hmm_alignment, alpha = 0.5, edgecolor = 'black', label = 'sequences emitted from profile hmm', density = True)
 	#plt.hist(sequence_energies_from_shuffled_sequences, alpha = 0.5, edgecolor = 'black', label = 'shuffled sequences')
 	plt.axvline(x = consensus_energy, color = 'red', label = 'consensus sequence from refined MSA')
 	plt.axvline(x = hmm_consensus_energy, color = 'blue', label = 'consensus sequence from hmm sequences')
@@ -288,10 +289,14 @@ def write_matlab_script(filename):
 
 	dca_calculation_script = '../martin_dca/dca_energy.m'
 	with open(dca_calculation_script, 'w') as f:
-		f.write("fasta_test = '/media/Data/consensus/temp_files/only_hmm_emitted.fasta';\n")
-		f.write("fasta_train = '/media/Data/consensus/temp_files/train_file.fasta';\n")
-		f.write("accession = " + "'" + filename + "';\n")
-		f.write("[score_train, score_test] = calculate_dca_scores(fasta_train,fasta_test,accession)")
+		f.write("try\n")
+		f.write("\tfasta_test = '/media/Data/consensus/temp_files/only_hmm_emitted.fasta';\n")
+		f.write("\tfasta_train = '/media/Data/consensus/temp_files/train_file.fasta';\n")
+		f.write("\taccession = " + "'" + filename + "';\n")
+		f.write("\t[score_train, score_test] = calculate_dca_scores(fasta_train,fasta_test,accession)\n")
+		f.write("catch\n")
+		f.write("\texit\n")
+		f.write("end")
 
 def call_matlab_script():
 	os.chdir('/usr/local/MATLAB/R2016a/bin')
@@ -321,17 +326,17 @@ def main_pydca(filename, accession_file):
 	split_combined_alignment(combined_file, only_refined, only_hmm)
 	train_test_partition(train_file, test_file, only_refined)
 
-	'''
-	try:
-		mfdca_compute_params(train_file)
-	except Exception as e:
-		print(e)
-		print('excuse me miss, we have a problem here.')
-		return
 
-	couplings, loa = read_couplings()
-	fields = read_fields()
-	'''
+	#try:
+	#	mfdca_compute_params(train_file)
+	#except Exception as e:
+	#	print(e)
+	#	print('excuse me miss, we have a problem here.')
+	#	return
+
+	#couplings, loa = read_couplings()
+	#fields = read_fields()
+
 
 	try:
 
@@ -394,12 +399,13 @@ def main_pydca(filename, accession_file):
 
 	#minimum = min([min(sequence_energies_from_hmm_alignment), min(sequence_energies_from_training_sequences)]) - 1000
 	#maximum = max([max(sequence_energies_from_hmm_alignment), max(sequence_energies_from_training_sequences)]) + 1000
-	#bins = np.linspace(minimum, maximum)
-	#pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
-	#print('Percentage Identity of the two consensus sequences: ', pi, '\n')
+	#bins_refined = np.linspace(min(sequence_energies_from_training_sequences), max(sequence_energies_from_training_sequences))
+	#bins_hmm = np.linspace(min(sequence_energies_from_hmm_alignment), max(sequence_energies_from_hmm_alignment))
+	pi = percentage_identity(consensus_seq_aligned, hmm_consensus_aligned)
+	print('Percentage Identity of the two consensus sequences: ', pi, '\n')
 
 	#plot_energies(sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, 
-	#	consensus_energy, hmm_consensus_energy, bins, dca_energy_plot)
+	#	consensus_energy, hmm_consensus_energy, bins_refined, bins_hmm, dca_energy_plot)
 
 	try:
 		write_matlab_script(filename)
@@ -408,7 +414,13 @@ def main_pydca(filename, accession_file):
 		return
 
 	end = time.time() - start
+	done_file = '/media/Data/consensus/temp_files/done_files.txt'
 	print('It took ' + str(end) + ' seconds to do DCA calculation for: ' + filename)
+	now = datetime.now()
+	# dd/mm/YY H:M:S
+	dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+	with open(done_file, 'a') as f:
+		f.write(filename + ' ' + dt_string + '\n')
 	print('\n\n\n')
 	time.sleep(2)
 
