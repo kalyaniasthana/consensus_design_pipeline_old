@@ -45,24 +45,24 @@ mean_train = -mean(score_train);
 mode_train = -mode(score_train);
 sd_train = std(score_train);
 consensus_train = -score_consensus(1);
-min_x_train = xlimtrain(1);
-max_x_train = xlimtrain(2);
+min_x_train = -max(score_train);
+max_x_train = -min(score_train);
 
 fprintf(file, '%s\n', 'TRAIN STATS (Refined Alignment)');
 fprintf(file, '%s\t%.6f\n', 'Mean: ', mean_train);
 fprintf(file, '%s\t%.6f\n', 'Mode: ', mode_train);
 fprintf(file, '%s\t%.6f\n', 'SD: ', sd_train);
 fprintf(file, '%s\t%.6f\n', 'Consensus energy: ', consensus_train);
-fprintf(file, '%s\t%d\n', 'Min x: ', min_x_train);
-fprintf(file, '%s\t%d\n', 'Max x: ', max_x_train);
+fprintf(file, '%s\t%.6f\n', 'Min x: ', min_x_train);
+fprintf(file, '%s\t%.6f\n', 'Max x: ', max_x_train);
 
 % test stats
 mean_test = -mean(score_test);
 mode_test = -mode(score_test);
 sd_test = std(score_test);
 consensus_test = -score_consensus(2);
-min_x_test = xlimtest(1);
-max_x_test = xlimtest(2);
+min_x_test = -max(score_test);
+max_x_test = -min(score_test);
 
 fprintf(file, '%s\n', '-------------------------------------------------------');
 fprintf(file, '%s\n', 'TEST STATS (HMM emitted sequences)');
@@ -70,8 +70,8 @@ fprintf(file, '%s\t%.6f\n', 'Mean: ', mean_test);
 fprintf(file, '%s\t%.6f\n', 'Mode: ', mode_test);
 fprintf(file, '%s\t%.6f\n', 'SD: ', sd_test);
 fprintf(file, '%s\t%.6f\n', 'Consensus energy: ', consensus_test);
-fprintf(file, '%s\t%d\n', 'Min x: ', min_x_test);
-fprintf(file, '%s\t%d\n', 'Max x: ', max_x_test);
+fprintf(file, '%s\t%.6f\n', 'Min x: ', min_x_test);
+fprintf(file, '%s\t%.6f\n', 'Max x: ', max_x_test);
 
 fclose(file);
 
