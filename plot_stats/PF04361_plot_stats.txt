@@ -1,0 +1,15 @@
+TRAIN STATS (Refined Alignment)
+Mean: 	-4837.414591
+Mode: 	-4575.468808
+SD: 	126.810403
+Consensus energy: 	-4595.462698
+Min x: 	-5079.499766
+Max x: 	-4575.468808
+-------------------------------------------------------
+TEST STATS (HMM emitted sequences)
+Mean: 	-2151.857288
+Mode: 	-1396.771115
+SD: 	230.842955
+Consensus energy: 	-4070.321162
+Min x: 	-2893.493173
+Max x: 	-1396.771115

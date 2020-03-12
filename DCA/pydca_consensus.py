@@ -21,6 +21,7 @@ start = time.time()
 mappings = {'A': 1, 'C': 2, 'D': 3, 'E': 4, 'F': 5, 'G': 6, 'H': 7, 'I': 8, 'K': 9, 'L': 10, 'M': 11,
 'N': 12, 'P': 13, 'Q': 14, 'R': 15, 'S': 16, 'T': 17, 'V': 18, 'W': 19, 'Y': 20, '-': 21}
 
+#mean field dca (pydca)
 def mfdca_compute_params(filename):
 	cwd = 'mfdca compute_params protein ../temp_files/train_file.fasta --verbose'
 	cwd = cwd.split(' ')
@@ -44,7 +45,7 @@ def mfdca_compute_params(filename):
 				time.sleep(5)
 				break
 
-
+#reading couplings file
 def read_couplings():
 	couplings_filename = 'DCA_output_train_file/couplings_train_file.txt'
 	couplings = {}
@@ -66,6 +67,7 @@ def read_couplings():
 
 	return couplings, loa
 
+#reading fields file
 def read_fields():
 	fields_filename = 'DCA_output_train_file/fields_train_file.txt'
 	fields = {}
@@ -82,6 +84,7 @@ def read_fields():
 
 	return fields
 
+#train test partition of the refined alignment 
 def train_test_partition(train_file, test_file, main_file):
 	sequences, headers = fasta_to_list(main_file)
 	nos = len(sequences)
@@ -99,6 +102,7 @@ def train_test_partition(train_file, test_file, main_file):
 					else:
 						fout_2.write(line)
 
+#energy calculation using couplings and fields from mfdca (pydca)
 def energy_function(sequence, couplings, fields):
 	energy = 0
 	sequence_length = len(sequence)
@@ -165,9 +169,12 @@ def energy_function(sequence, couplings, fields):
 
 	return energy
 
+'''
 def score_sequence(energy):
 	score = -energy
 	return score
+'''
+#split combined alignment to refined and hmm
 
 def split_combined_alignment(combined_alignment, only_refined, only_hmm):
 	refined = []
@@ -183,6 +190,7 @@ def split_combined_alignment(combined_alignment, only_refined, only_hmm):
 	SeqIO.write(refined, only_refined, 'fasta')
 	SeqIO.write(hmm, only_hmm, 'fasta')
 
+
 def sequence_energies_loop(sequences, couplings, fields):
 	energy_list = []
 	for sequence in sequences:
@@ -190,7 +198,7 @@ def sequence_energies_loop(sequences, couplings, fields):
 		energy_list.append(e)
 
 	return energy_list
-
+'''
 def score_loop(energies):
 	scores = []
 	for e in energy:
@@ -199,6 +207,7 @@ def score_loop(energies):
 	scores = np.array(scores)
 
 	return scores
+'''
 
 def percentage_identity(refined_consensus, hmm_consensus):
 	matches = 0
@@ -232,6 +241,7 @@ def analyse_fields(loa, fields):
 		min_value = min(values)
 		print(i, max_value, min_value)
 
+#shuffing sequences
 def fisher_yates_shuffling(sequences):
 	seq_length = len(sequences[0])
 	shuffled = []
@@ -247,6 +257,7 @@ def fisher_yates_shuffling(sequences):
 
 	return shuffled
 
+#shuffling sequences w/o moving dashes
 def fisher_yates_without_dashes(sequences):
 	seq_length = len(sequences[0])
 	shuffled = []
@@ -268,6 +279,7 @@ def fisher_yates_without_dashes(sequences):
 
 	return shuffled
 
+#plot energies
 def plot_energies(
         sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment,
         consensus_energy, hmm_consensus_energy, bins_refined, bins_hmm, dca_energy_plot
@@ -285,6 +297,7 @@ def plot_energies(
 	plt.cla()
 	plt.close()
 
+#for martin's program
 def write_matlab_script(filename):
 
 	dca_calculation_script = '../martin_dca/dca_energy.m'

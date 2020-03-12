@@ -182,10 +182,12 @@ def selex_to_fasta(in_file, out_file):
 			fout.write('>' + line[0:30].upper() + '\n')
 			fout.write(line[30: ].upper())
 
+#call cd-hit for clustering and removing similar sequences
 def cdhit(in_file, out_file):
 	cmd = 'cd-hit -i ' + in_file + ' -o ' + out_file + ' -T 1 -c 0.90'
 	os.system(cmd)
 
+#get ann indices of a value in a list
 def get_all_indices(l, value):
 
 	return [i for i, val in enumerate(l) if val == value]
@@ -216,7 +218,7 @@ def percentage_identity(consensus_fasta):
 			matches += 1
 	pi = (matches*100)/seq_length
 	return pi
-
+'''
 def store_retrieve_identity_dict(accession, pi, filename):
 	my_dict = {}
 	with open(filename, 'a') as f:
@@ -230,6 +232,7 @@ def store_retrieve_identity_dict(accession, pi, filename):
 
 	return my_dict
 
+
 def plot_dict_key_and_value(my_dict):
 	accessions = list(my_dict.keys())
 	pi_values = list(my_dict.values())
@@ -238,7 +241,9 @@ def plot_dict_key_and_value(my_dict):
 	ax = df.plot.bar(x = 'Accession', y = '% Identity', rot = 0,  stacked = True, colormap = 'Paired')
 	fig = ax.get_figure()
 	fig.savefig('temp_files/pi_plot.png')
+'''
 
+#different alignment options
 def alignment(option, in_file, out_file):
 	if option == '1':
 		fasta_to_clustalo(in_file, out_file)
@@ -250,6 +255,7 @@ def alignment(option, in_file, out_file):
 		print('Invalid Option')
 		sys.exit()
 
+#realigning sequences to an existing alignment using mafft
 def realign(option, original_alignment, hmm_sequences, out_file):
 	if option == '2':
 		cwd = 'mafft --add ' + hmm_sequences + ' --reorder --keeplength ' + original_alignment + ' > ' + out_file
@@ -263,6 +269,7 @@ def realign(option, original_alignment, hmm_sequences, out_file):
 		print('Invalid input')
 		sys.exit()
 
+#removing unwanted characters from a filename
 def refine_filename(ip):
 	ip = str(ip, 'utf-8')
 	ip = ip.strip('\n')
@@ -286,12 +293,14 @@ def main(accession, accession_file):
 	write_file, out_file, temp_file, perc_idens = common_files()
 
 	#for accession in accession_list:
+	#if dca plot exists then exit function
 	plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
 	if path.exists(plot):
 		remove_accession(accession_file, accession)
 		print('Already calculated')
 		return
 
+	#continue only if family is downloaded
 	my_file = 'families/' + accession + '.fasta'
 	if path.exists(my_file):
 
@@ -307,19 +316,23 @@ def main(accession, accession_file):
 		#if len(test_seq) > 10000:
 		#	return
 
+		#cd-hit clustering
 		try:
 			cdhit(write_file, out_file)
 		except Exception as e:
 			print('Exception: ' + str(e))
 			return
 
-		test_seq, test_head = fasta_to_list(out_file)
-		if len(test_seq) > 5000 or len(test_seq) < 500:
-			print('Too many/Too few sequences')
-			return
+		#limiting to families which have less than 5000 sequences after cd-hit clustering (for now)
+		#test_seq, test_head = fasta_to_list(out_file)
+		#if len(test_seq) > 6000 or len(test_seq) < 500:
+		#	print('Too many/Too few sequences')
+		#	return
 
+		#getting some strings from ugly_strings.py file
 		refined_alignment, plot, final_consensus, profile_hmm, hmm_emitted_sequences, combined_alignment = specific_files(filename)
 
+		#plotting length distribution
 		sequence_lengths = sequence_length_list(out_file)
 		x = [i for i in range(len(sequence_lengths))]
 		plt.scatter(x, sequence_lengths)
@@ -328,6 +341,7 @@ def main(accession, accession_file):
 		plt.cla()
 		plt.close()
 
+		#0th alignment step
 		mode = mode_of_list(sequence_lengths)[0]
 		try:
 			alignment(option, out_file, write_file)
@@ -351,8 +365,10 @@ def main(accession, accession_file):
 				#	print('Existing...familiy is too small !!!')
 				#	break
 
+
 				length_of_alignment = len(sequences[0])
 				print('Length of Alignment = ', length_of_alignment)
+				#here loa is the length of alignment from the previous iteration
 				print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
 
 				if number_of_sequences < 500 or length_of_alignment < mode - 15 or loa == length_of_alignment:
@@ -405,28 +421,29 @@ def main(accession, accession_file):
 		time.sleep(2)
 
 if __name__ == '__main__':
-	original_accession_file = 'temp_files/accession_list.txt'
-	copied_accession_file = 'temp_files/accession_list_copy.txt'
+	accession_file = 'temp_files/accession_list.txt'
+	#copied_accession_file = 'temp_files/accession_list_copy.txt'
 	#original_accession_file = 'temp_files/exceptions.txt'
 	#copied_accession_file = 'temp_files/exceptions_copy.txt'
-	copyfile(original_accession_file, copied_accession_file)
+	#copyfile(original_accession_file, copied_accession_file)
 	accession_list = []
-	with open(copied_accession_file, 'r') as f:
+	with open(accession_file, 'r') as f:
 		for line in f:
 			accession_list.append(line.strip('\n'))
 
+	#calling main function for all families in accession_list
 
 	for accession in accession_list:
 		print('Iterative Alignment ', accession)
 		time.sleep(2)
-		t1 = threading.Thread(target = main, args = (accession, copied_accession_file, ))
+		t1 = threading.Thread(target = main, args = (accession, accession_file, ))
 		t1.setDaemon(True)
 		t1.start()
 		t1.join()
 		os.chdir('/media/Data/consensus/DCA')
 		print('DCA calculation ', accession)
 		time.sleep(2)
-		t2 = threading.Thread(target = main_pydca, args = (accession, copied_accession_file, ))
+		t2 = threading.Thread(target = main_pydca, args = (accession, accession_file, ))
 		t2.setDaemon(True)
 		t2.start()
 		t2.join()
