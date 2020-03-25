@@ -296,7 +296,7 @@ def main(accession, accession_file):
         #if dca plot exists then exit function
         plot = 'dca_energy_plots/' + accession + '_dca_energies.png'
         if path.exists(plot):
-                remove_accession(accession_file, accession)
+                #remove_accession(accession_file, accession)
                 print('Already calculated')
                 return
 
@@ -355,6 +355,9 @@ def main(accession, accession_file):
                 #if length of alignment does not change in subsequent iterations
                 #if length of alignment becomes to small i.e -15 the desired length (mode length)
                 loa = 0
+                condition = 'no_condition'
+                x = 0.1*mode
+                y = mode - x
                 try:
 
                         while True:
@@ -370,16 +373,15 @@ def main(accession, accession_file):
                                 print('Length of Alignment = ', length_of_alignment)
                                 #here loa is the length of alignment from the previous iteration
                                 print('Alignment length (previous iteration): ', loa, 'Alignment length (current iteration): ', length_of_alignment)
-
-                                if number_of_sequences < 500 or length_of_alignment < mode - 0.1*mode or loa == length_of_alignment:
+                                if number_of_sequences < 500:
+                                    condition = 'condition_1'
+                                elif length_of_alignment < y:
+                                    condition = 'condition_2'
+                                elif loa == length_of_alignment:
+                                    condition = 'condition_3'
+                                if number_of_sequences < 500 or length_of_alignment < y or loa == length_of_alignment:
                                         f_tag = open('/media/Data/consensus/temp_files/break_tags.txt', 'a')
-                                        if number_of_sequences < 500:
-                                            f_tag.write(filename + ' ' + 'condition_1')
-                                        if length_of_alignment < mode - 0.1*mode:
-                                            f_tag.write(filename + ' ' + 'condition_2')
-                                        if loa == length_of_alignment:
-                                            f_tag.write(filename + ' ' + 'condition_3')
-                                        f_tag.close()
+                                        f_tag.write(filename + ' ' + condition)
                                         copyfile(write_file, refined_alignment)
                                         f = open(final_consensus, 'w')
                                         f.write('>consensus-from-refined-alignment' + '\n')
@@ -399,7 +401,7 @@ def main(accession, accession_file):
                                         realign(option, refined_alignment, ip, combined_alignment)
                                         print('***********Final Consensus Sequence from refined alignment: ')
                                         print(cs)
-                                        f.close()
+
                                         break
 
                                 pm = profile_matrix(sequences)

@@ -322,12 +322,12 @@ def main_pydca(filename, accession_file):
 	combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, consensus_file, combined_with_consensus = pydca_strings(filename)
 	try:
 		if os.stat(consensus_file).st_size == 0 or os.stat(combined_file) == 0:
-			remove_accession(accession_file, filename)
+			#remove_accession(accession_file, filename)
 			print('Some files are missing, so skipping this family for now!')
 			return
 
 		if path.exists(dca_energy_plot) and os.stat(dca_energy_plot).st_size != 0:
-			remove_accession(accession_file, filename)
+			#remove_accession(accession_file, filename)
 			print('Already calculated!')
 			return
 
@@ -384,7 +384,7 @@ def main_pydca(filename, accession_file):
 	consensus_seq = consensus_seq[0]
 
 	option = '2'
-	realign(option, combined_file, consensus_file, combined_with_consensus)
+	realign(option, only_refined, consensus_file, combined_with_consensus)
 
 	for record in SeqIO.parse(combined_with_consensus, 'fasta'):
 		#print(record.id)
