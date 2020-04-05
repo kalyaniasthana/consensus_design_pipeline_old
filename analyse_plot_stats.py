@@ -232,11 +232,19 @@ def main():
         print('l: ',l)
         fig = plt.figure()
         ax = fig.add_axes([0, 0, 1, 1])
-        labels = ['a1', 'a2', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6']
-        ax.bar(labels, l)
-        plt.xlabel('Position in DCA energy plot')
+        labels = ['Refined MSA CS < HMM CS', 'Refined MSA CS > HMM CS']
+        ax.bar(labels, l[0: 2])
         plt.ylabel('Number of sequences')
-        plt.savefig('cool_plots/consensus_energies.png', bbox_inches = 'tight')
+        plt.savefig('cool_plots/consensus_energies_1.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+        fig = plt.figure()
+        labels = ['outside (right - high)', 'outside (left - low)', '> 2 SD inside', '< -2 SD inside', 'b/w mean and 2 SD', 'b/w mean and -2SD']
+        ax.bar(labels, l[2: ])
+        plt.xlabel('Position in DCA energy plot')
+        plt.ylabel('Number of Sequences')
+        plt.savefig('cool_plots/consensus_energies_2.png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
         plt.close()
