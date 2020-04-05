@@ -234,6 +234,8 @@ def main():
         ax = fig.add_axes([0, 0, 1, 1])
         labels = ['a1', 'a2', 'b1', 'b2', 'b3', 'b4', 'b5', 'b6']
         ax.bar(labels, l)
+        plt.xlabel('Position in DCA energy plot')
+        plt.ylabel('Number of sequences')
         plt.savefig('cool_plots/consensus_energies.png')
         plt.clf()
         plt.cla()
