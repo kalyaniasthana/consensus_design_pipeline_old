@@ -236,7 +236,7 @@ def main():
         ax.bar(labels, l)
         plt.xlabel('Position in DCA energy plot')
         plt.ylabel('Number of sequences')
-        plt.savefig('cool_plots/consensus_energies.png')
+        plt.savefig('cool_plots/consensus_energies.png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
         plt.close()
