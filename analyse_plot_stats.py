@@ -241,6 +241,7 @@ def main():
         plt.close()
         fig = plt.figure()
         labels = ['outside (right - high)', 'outside (left - low)', '> 2 SD inside', '< -2 SD inside', 'b/w mean and 2 SD', 'b/w mean and -2SD']
+        ax = fig.add_axes([0, 0, 1, 1])
         ax.bar(labels, l[2: ])
         plt.xlabel('Position in DCA energy plot')
         plt.ylabel('Number of Sequences')
