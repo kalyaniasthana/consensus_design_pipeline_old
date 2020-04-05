@@ -46,25 +46,37 @@ def analyse_stats(train_stats, test_stats):
         consensus_energy_train = train_stats['Consensus energy']
         consensus_energy_difference = consensus_energy_train - test_stats['Consensus energy']
 
+        a1, a2, b1, b2, b3, b4, b5, b6 = 0, 0, 0, 0, 0, 0, 0, 0
+
         if consensus_energy_difference < 0:
-                print('Consensus from refined alignment has lower energy than consensus from hmm emitted sequences')
+                a1 += 1
+               # print('Consensus from refined alignment has lower energy than consensus from hmm emitted sequences')
         else:
-                print('Consensus from hmm emitted sequences have lower energy than consensus from refined alignment')
+                a2 += 1
+                #print('Consensus from hmm emitted sequences have lower energy than consensus from refined alignment')
 
         two_deviations_above_mean_value_train = train_stats['Mean'] + 2*train_stats['SD']
         two_deviations_below_mean_value_train = train_stats['Mean'] - 2*train_stats['SD']
         if consensus_energy_train > train_stats['Max x']:
-                print('Consensus energy is out of the distribution (right side - high DCA energy)', '#######################')
+                b1 += 1
+                #print('Consensus energy is out of the distribution (right side - high DCA energy)', '#######################')
         elif consensus_energy_train < train_stats['Min x']:
-                print('Consensus energy is out of the distribution (left side - low DCA energy)')
+                b2 += 1
+                #print('Consensus energy is out of the distribution (left side - low DCA energy)')
         elif consensus_energy_train > two_deviations_above_mean_value_train:
-                print('Consensus energy is two standard deviations above the mean but inside the distribution', '#########################')
+                b3 += 1
+                #print('Consensus energy is two standard deviations above the mean but inside the distribution', '#########################')
         elif consensus_energy_train < two_deviations_below_mean_value_train:
-                print('Consensus energy is two standard deviations below the mean but inside the distribution')
+                b4 += 1
+                #print('Consensus energy is two standard deviations below the mean but inside the distribution')
         elif consensus_energy_train < two_deviations_above_mean_value_train and consensus_energy_train > train_mean:
-                print('Consensus energy is greater than mean but within two standard deviations')
+                b5 += 1
+                #print('Consensus energy is greater than mean but within two standard deviations')
         elif consensus_energy_train > two_deviations_below_mean_value_train and consensus_energy_train < train_mean:
-                print('Consensus energy is below the mean but within two standard deviations')
+                b6 +=1 
+                #print('Consensus energy is below the mean but within two standard deviations')
+        #total = a1 + a2 + b1 + b2 + b3 + b4 + b5 + b6
+        return [a1, a2, b1, b2, b3, b4, b5, b6]
 
 def scatter_plot(x, y, plot_name, x_label, y_label):
 
@@ -98,7 +110,9 @@ def main():
         normed_consensus_energies = []
         normed_mode_energies = []
         mode_energy_75, consensus_energy_75, mean_energy_75, hmm_mode_75, mode_minus_refined_cs_75, mode_minus_hmm_cs_75 = 0, 0, 0, 0, 0, 0
-
+        #total, a1, a2, b1, b2, b3, b4, b5, b6 = analyse_stats(train_stats, test_stats)
+        #print(total, a1, a2, b1, b2, b3, b4, b5, b6)
+        l = [0, 0, 0, 0, 0, 0, 0, 0]
         for f in filenames:
                 #print(f, '************************')
                 #sys.exit()
@@ -117,6 +131,8 @@ def main():
 
                 fname = path + f
                 train_stats, test_stats = get_plot_stats_from_file(fname)
+                res = analyse_stats(train_stats, test_stats)
+                l = [sum(x) for x in zip(l, res)]
                 all_train_stats.append(train_stats)
                 refined_consensus_energies.append(train_stats['Consensus energy'])
                 refined_mode_energies.append(train_stats['Mode'])
@@ -213,7 +229,7 @@ def main():
         #wow it's almost 1
         corr = pearsonr(refined_mode_energies, refined_consensus_energies)
         print('Correlation Coefficient (Consensus Energy and Mode Energy): ',corr[0])
-
+        print('l: ',l)
 
 if __name__ == '__main__':
         main()
