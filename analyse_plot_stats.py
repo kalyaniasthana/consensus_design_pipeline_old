@@ -218,7 +218,7 @@ def main():
         plt.scatter(refined_cse, hmm_modes, color = 'red', label = 'Refined consensus vs HMM mode')
         plt.legend(loc = 'upper left')
         plt.title('Families with HMM consensus energy < Refined consensus energy')
-        plt.axis('square')
+        #plt.axis('square')
         plt.savefig('cool_plots/cs_vs_hmm_mode(hmm cs < refined cs).png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
