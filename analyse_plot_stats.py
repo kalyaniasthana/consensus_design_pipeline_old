@@ -82,6 +82,8 @@ def scatter_plot(x, y, plot_name, x_label, y_label):
 
         plot_name = 'cool_plots/' + plot_name
         plt.scatter(x, y)
+        if plot_name == 'refined_mode_vs_hmm_mode.png':
+            plt.plot(x, x, '-r', label = 'x = y')
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.axis('square')
