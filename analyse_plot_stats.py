@@ -125,6 +125,7 @@ def main():
         #total, a1, a2, b1, b2, b3, b4, b5, b6 = analyse_stats(train_stats, test_stats)
         #print(total, a1, a2, b1, b2, b3, b4, b5, b6)
         l = [0, 0, 0, 0, 0, 0, 0, 0]
+        hmm_cse, hmm_modes, refined_cse = [], [], []
         for f in filenames:
                 #print(f, '************************')
                 #sys.exit()
@@ -154,7 +155,7 @@ def main():
                 mode_minus_hmm_consensus.append(abs(train_stats['Mode'] - test_stats['Consensus energy']))
 
 
-                hmm_cse, hmm_modes, refined_cse = [], [], []
+                #hmm_cse, hmm_modes, refined_cse = [], [], []
                 if train_stats['Consensus energy'] > test_stats['Consensus energy']:
                     hmm_cse.append(test_stats['Consensus energy'])
                     hmm_modes.append(test_stats['Mode'])
@@ -211,11 +212,12 @@ def main():
         plt.clf()
         plt.cla()
         plt.close()
-
+        print(hmm_cse, hmm_modes, refined_cse)
+        print(len(hmm_cse))
         plt.scatter(hmm_cse, hmm_modes, color = 'blue', label = 'HMM consensus vs HMM mode')
         plt.scatter(refined_cse, hmm_modes, color = 'red', label = 'Refined consensus vs HMM mode')
         plt.legend(loc = 'upper right')
-        plt.axis('square')
+        #plt.axis('square')
         plt.savefig('cool_plots/cs_vs_hmm_mode(hmm cs < refined cs).png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
