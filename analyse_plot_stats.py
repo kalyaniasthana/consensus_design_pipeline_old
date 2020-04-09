@@ -79,10 +79,19 @@ def analyse_stats(train_stats, test_stats):
         return [a1, a2, b1, b2, b3, b4, b5, b6]
 
 def scatter_plot(x, y, plot_name, x_label, y_label):
+        '''
+        if plot_name == 'refined_mode_vs_hmm_mode.png':
+            fig, ax = plt.subplots()
+            ax.scatter(x, y)
+            line = mlines.Line2D([0, 1], [0, 1], color = 'red')
+            transform = ax.transAxes
+            line.set_transform(transform)
+            ax.add_line(line)
+        '''
 
         plot_name = 'cool_plots/' + plot_name
         plt.scatter(x, y)
-        if plot_name == 'refined_mode_vs_hmm_mode.png':
+        if plot_name == 'cool_plots/refined_mode_vs_hmm_mode.png':
             plt.plot(x, x, '-r', label = 'x = y')
         plt.xlabel(x_label)
         plt.ylabel(y_label)
