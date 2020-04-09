@@ -84,6 +84,7 @@ def scatter_plot(x, y, plot_name, x_label, y_label):
         plt.scatter(x, y)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
+        plt.axis('equal')
         plt.savefig(plot_name, bbox_inches='tight')
         plt.clf()
         plt.cla()
