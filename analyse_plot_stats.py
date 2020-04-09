@@ -152,70 +152,19 @@ def main():
                 hmm_mode_energies.append(test_stats['Mode'])
                 mode_minus_refined_consensus.append(abs(train_stats['Mode'] - train_stats['Consensus energy']))
                 mode_minus_hmm_consensus.append(abs(train_stats['Mode'] - test_stats['Consensus energy']))
+
+
+                hmm_cse, hmm_modes, refined_cse = [], [], []
+                if train_stats['Consensus energy'] > test_stats['Consensus energy']:
+                    hmm_cse.append(test_stats['Consensus energy'])
+                    hmm_modes.append(test_stats['Mode'])
+                    refined_cse.append(train_stats['Consensus energy'])
                 try:
                     normed_consensus_energies.append(train_stats['Consensus energy']/loa)
                     normed_mode_energies.append(train_stats['Mode']/loa)
                 except:
                     continue
 
-        '''
-        plot_name = 'cool_plots/' + 'consensus_energy_vs_mode_energy'
-        plt.scatter(refined_consensus_energies, refined_mode_energies, color = 'blue')
-        plt.scatter([consensus_energy_75], [mode_energy_75], color = 'red', label = 'PF00075')
-        plt.legend(loc = 'upper left')
-        plt.xlabel('Consensus Energy')
-        plt.ylabel('Mode Energy')
-        plt.savefig(plot_name, bbox_inches='tight')
-        plt.clf()
-        plt.cla()
-        plt.close()
-
-        plot_name = 'cool_plots/' + 'normed_consensus_energy_vs_mode_energy.png'
-        plt.scatter(normed_consensus_energies, normed_mode_energies, color = 'blue')
-        #plt.scatter([normed_ce_75], [normed_me_75], color = 'red', label = 'PF00075')
-        #plt.legend(loc = 'upper left')
-        plt.xlabel('Consensus Energy/Length of Alignment')
-        plt.ylabel('Mode Energy/Length of Alignment')
-        plt.savefig(plot_name, bbox_inches='tight')
-        plt.clf()
-        plt.cla()
-        plt.close()
-
-
-        plot_name = 'cool_plots/' + 'consensus_energy_vs_mean_energy'
-        plt.scatter(refined_consensus_energies, refined_mean_energies, color = 'blue')
-        plt.scatter([consensus_energy_75], [mean_energy_75], color = 'red', label = 'PF00075')
-        plt.legend(loc = 'upper left')
-        plt.xlabel('Consensus Energy')
-        plt.ylabel('Mean Energy')
-        plt.savefig(plot_name, bbox_inches='tight')
-        plt.clf()
-        plt.cla()
-        plt.close()
-
-        plot_name = 'cool_plots/' + 'refined_mode_vs_hmm_mode.png'
-        plt.scatter(refined_mode_energies, hmm_mode_energies, color = 'blue')
-        plt.scatter([mode_energy_75], [hmm_mode_75], color = 'red', label = 'PF00075')
-        plt.legend(loc = 'upper left')
-        plt.xlabel('Mode energies (refined alignment)')
-        plt.ylabel('Mode energies (HMM alignment)')
-        plt.savefig(plot_name, bbox_inches='tight')
-        plt.clf()
-        plt.cla()
-        plt.close()
-
-        plot_name = 'cool_plots/' + 'mode_minus_consensuses.png'
-        plt.scatter(mode_minus_refined_consensus, mode_minus_hmm_consensus, color = 'blue')
-        plt.scatter([mode_minus_refined_cs_75], [mode_minus_hmm_cs_75], color = 'red', label = 'PF00075')
-        plt.legend(loc = 'upper left')
-        plt.xlabel('(Mode Energy) - (Refined Consensus Energy)')
-        plt.ylabel('(Mode Energy) - (HMM Consensus Energy)')
-        plt.savefig(plot_name, bbox_inches='tight')
-        plt.clf()
-        plt.cla()
-        plt.close()
-        '''
-        
         #normed consensus energy
         scatter_plot(normed_consensus_energies, normed_mode_energies, 'normed_consensus_energy_vs_mode_energy.png',
                 'Consensus Energy/Length of Alignment', 'Mode Energy/Length of Alignment')
@@ -262,6 +211,19 @@ def main():
         plt.clf()
         plt.cla()
         plt.close()
+
+        plt.scatter(hmm_cse, hmm_modes, color = 'blue', label = 'HMM consensus vs HMM mode')
+        plt.scatter(refined_cse, hmm_modes, color = 'red', label = 'Refined consensus vs HMM mode')
+        plt.legend(loc = 'upper right')
+        plt.axis('square')
+        plt.savefig('cool_plots/cs_vs_hmm_mode(hmm cs < refined cs).png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+
+
+        
+
 
 if __name__ == '__main__':
         main()
