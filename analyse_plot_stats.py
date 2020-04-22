@@ -264,6 +264,29 @@ def main():
         plt.cla()
         plt.close()
 
+        plt.scatter(nums_excp, loa_excp_original)
+        plt.xlabel('Family')
+        plt.ylabel('Length of Original Alignment')
+        plt.savefig('cool_plots/loa_original_for_deviating_families.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+
+        plt.scatter(nums_excp, nos_excp_refined)
+        plt.xlabel('Family')
+        plt.ylabel('Number of Sequences')
+        plt.savefig('cool_plots/nos_refined_for_deviating_families.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+
+        plt.scatter(nums_excp, nos_excp_original)
+        plt.xlabel('Family')
+        plt.ylabel('Number of Sequences')
+        plt.savefig('cool_plots/nos_original_for_deviating_families.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
 
         print(names_excp, nums_excp, loa_excp_refined, loa_excp_original, nos_excp_refined, nos_excp_original)
 
