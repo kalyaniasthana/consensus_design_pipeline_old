@@ -274,7 +274,7 @@ def main():
 
         plt.scatter(nums_excp, nos_excp_refined)
         plt.xlabel('Family')
-        plt.ylabel('Number of Sequences')
+        plt.ylabel('Number of Sequences in Refined Alignment')
         plt.savefig('cool_plots/nos_refined_for_deviating_families.png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
@@ -282,7 +282,7 @@ def main():
 
         plt.scatter(nums_excp, nos_excp_original)
         plt.xlabel('Family')
-        plt.ylabel('Number of Sequences')
+        plt.ylabel('Number of Sequences in Orignal Alignment')
         plt.savefig('cool_plots/nos_original_for_deviating_families.png', bbox_inches = 'tight')
         plt.clf()
         plt.cla()
