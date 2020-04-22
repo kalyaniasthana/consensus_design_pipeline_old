@@ -256,10 +256,8 @@ def main():
         plt.cla()
         plt.close()
     
-        fig = plt.figure()
-        ax = fig.add_axes([0, 0, 1, 1])
-        labels = nums_excp
-        ax.bar(labels, names_excp)
+        plt.scatter(nums_excp, loa_excp_refined)
+        plt.xlabel('Family')
         plt.ylabel('Length of Refined Alignment')
         plt.savefig('cool_plots/loa_refined_for_deviating_families.png', bbox_inches = 'tight')
         plt.clf()
