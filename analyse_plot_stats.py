@@ -101,12 +101,35 @@ def scatter_plot(x, y, plot_name, x_label, y_label):
         plt.cla()
         plt.close()
 
-def find_alignment_length(accession):
+def find_alignment_length_refined(accession):
 
         refined_alignment_filename = 'refined_alignments/' + accession + '_refined.fasta'
         for record in SeqIO.parse(refined_alignment_filename, 'fasta'):
                 loa = len(str(record.seq).upper())
                 return loa
+
+def find_number_of_sequences_refined(accession):
+
+        refined_alignment_filename = 'refined_alignments/' + accession + '_refined.fasta'
+        l = []
+        for record in SeqIO.parse(refined_alignment_filename, 'fasta'):
+            l.append(record.seq)
+        return len(l)
+
+def find_alignment_length(accession):
+
+        fam_name = 'families/' + accession + '.fasta'
+        for record in SeqIO.parse(fam_name, 'fasta'):
+            loa = len(str(record.seq).upper())
+            return loa
+
+def find_number_of_sequences(accession):
+        
+        fam_name = 'families/' + accession + '.fasta'
+        l = []
+        for record in SeqIO.parse(fam_name, 'fasta'):
+            l.append(record.seq)
+        return len(l)
 
 def main():
 
@@ -126,11 +149,13 @@ def main():
         #print(total, a1, a2, b1, b2, b3, b4, b5, b6)
         l = [0, 0, 0, 0, 0, 0, 0, 0]
         hmm_cse, hmm_modes, refined_cse = [], [], []
+        names_excp, nums_excp, loa_excp_refined, nos_excp_refined, loa_excp_original, nos_excp_original = [], [], [], [], [], []
+        count = 0
         for f in filenames:
                 #print(f, '************************')
                 #sys.exit()
                 accession = f[0:7]
-                loa = find_alignment_length(accession)
+                loa = find_alignment_length_refined(accession)
 
                 if f == 'PF00075_plot_stats.txt':
                         mode_energy_75 = train_stats['Mode']
@@ -153,7 +178,14 @@ def main():
                 hmm_mode_energies.append(test_stats['Mode'])
                 mode_minus_refined_consensus.append(abs(train_stats['Mode'] - train_stats['Consensus energy']))
                 mode_minus_hmm_consensus.append(abs(train_stats['Mode'] - test_stats['Consensus energy']))
-
+                if train_stats['Max x'] < train_stats['Consensus energy']:
+                    count += 1
+                    names_excp.append(accession)
+                    nums_excp.append(count)
+                    loa_excp_refined.append(find_alignment_length_refined(accession))
+                    nos_excp_refined.append(find_number_of_sequences_refined(accession))
+                    loa_excp_original.append(find_alignment_length(accession))
+                    nos_excp_original.append(find_number_of_sequences(accession))
 
                 #hmm_cse, hmm_modes, refined_cse = [], [], []
                 if train_stats['Consensus energy'] > test_stats['Consensus energy']:
@@ -223,9 +255,19 @@ def main():
         plt.clf()
         plt.cla()
         plt.close()
+    
+        fig = plt.figure()
+        ax = fig.add_axes([0, 0, 1, 1])
+        labels = nums_excp
+        ax.bar(labels, names_excp)
+        plt.ylabel('Length of Refined Alignment')
+        plt.savefig('cool_plots/loa_refined_for_deviating_families.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
 
 
-        
+        print(names_excp, nums_excp, loa_excp_refined, loa_excp_original, nos_excp_refined, nos_excp_original)
 
 
 if __name__ == '__main__':
