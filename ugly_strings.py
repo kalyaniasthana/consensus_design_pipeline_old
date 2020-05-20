@@ -1,3 +1,6 @@
+#each of these functions defines some strings, which are all paths to a file or a directory
+#this is to make the larger scripts look cleaner
+
 write_file, out_file, temp_file, perc_idens, refined_alignment, plot, final_consensus, profile_hmm, emitted_alignment, emitted_alignment_fasta, aligned_cs = '', '', '', '', '', '', '', '', '', '', ''
 
 def common_files():

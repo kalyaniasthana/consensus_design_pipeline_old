@@ -6,16 +6,19 @@ from scipy.stats import pearsonr
 from Bio import SeqIO
 from os import path, stat
 
-
+#a function to get all file names from the path of a directory
 def get_plot_stat_files(path):
 
         filenames = [f for f in listdir(path) if isfile(join(path, f))]
         return filenames
-
+#there is a separate stat file for each dca energy plot
+#this function creates two dictionaries (for train(refined alignment) and test(hmm sequences) data) for each stat file
 def get_plot_stats_from_file(filename):
 
         train_stats = {}
         test_stats = {}
+        #checkpoint is a flag to distinguish if the read line is a part of train stats or test stats 
+        #look at a stat file from plot_stats folder to understand this better
         checkpoint = '' 
 
         with open(filename, 'r') as f:
@@ -144,19 +147,18 @@ def main():
         mode_minus_hmm_consensus = []
         normed_consensus_energies = []
         normed_mode_energies = []
+        #variable for PF00075
         mode_energy_75, consensus_energy_75, mean_energy_75, hmm_mode_75, mode_minus_refined_cs_75, mode_minus_hmm_cs_75 = 0, 0, 0, 0, 0, 0
-        #total, a1, a2, b1, b2, b3, b4, b5, b6 = analyse_stats(train_stats, test_stats)
-        #print(total, a1, a2, b1, b2, b3, b4, b5, b6)
         l = [0, 0, 0, 0, 0, 0, 0, 0]
         hmm_cse, hmm_modes, refined_cse = [], [], []
         names_excp, nums_excp, loa_excp_refined, nos_excp_refined, loa_excp_original, nos_excp_original = [], [], [], [], [], []
         count = 0
+       #for all plot_stats files
         for f in filenames:
-                #print(f, '************************')
-                #sys.exit()
+
                 accession = f[0:7]
                 loa = find_alignment_length_refined(accession)
-
+                #varible values for PF00075
                 if f == 'PF00075_plot_stats.txt':
                         mode_energy_75 = train_stats['Mode']
                         consensus_energy_75 = train_stats['Consensus energy']
@@ -166,6 +168,7 @@ def main():
                         mode_minus_hmm_cs_75 = abs(mode_energy_75 - test_stats['Consensus energy'])
                         normed_ce_75 = consensus_energy_75/loa
                         normed_me_75 = mode_energy_75/loa
+
 
                 fname = path + f
                 train_stats, test_stats = get_plot_stats_from_file(fname)
@@ -178,6 +181,7 @@ def main():
                 hmm_mode_energies.append(test_stats['Mode'])
                 mode_minus_refined_consensus.append(abs(train_stats['Mode'] - train_stats['Consensus energy']))
                 mode_minus_hmm_consensus.append(abs(train_stats['Mode'] - test_stats['Consensus energy']))
+                #stats for exceptions
                 if train_stats['Max x'] < train_stats['Consensus energy']:
                     count += 1
                     names_excp.append(accession)
