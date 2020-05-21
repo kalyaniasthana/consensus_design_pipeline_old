@@ -81,7 +81,7 @@ def analyse_stats(train_stats, test_stats):
         #total = a1 + a2 + b1 + b2 + b3 + b4 + b5 + b6
         return [a1, a2, b1, b2, b3, b4, b5, b6]
 
-def scatter_plot(x, y, plot_name, x_label, y_label):
+def scatter_plot(x, y, plot_name, x_label, y_label, xyline):
         '''
         if plot_name == 'refined_mode_vs_hmm_mode.png':
             fig, ax = plt.subplots()
@@ -94,7 +94,7 @@ def scatter_plot(x, y, plot_name, x_label, y_label):
 
         plot_name = 'cool_plots/' + plot_name
         plt.scatter(x, y)
-        if plot_name == 'cool_plots/refined_mode_vs_hmm_mode.png':
+        if xyline is True:
             plt.plot(x, x, '-r', label = 'x = y')
         plt.xlabel(x_label)
         plt.ylabel(y_label)
@@ -134,8 +134,13 @@ def find_number_of_sequences(accession):
             l.append(record.seq)
         return len(l)
 
-def main():
+def intersection(list_1, list_2):
+    list_3 = [val for val in list_1 if val in list_2]
+    return list_3
 
+def main():
+    
+        iterations = 0
         path = 'plot_stats/'
         filenames = get_plot_stat_files(path)
         all_train_stats = []
@@ -153,9 +158,15 @@ def main():
         hmm_cse, hmm_modes, refined_cse = [], [], []
         names_excp, nums_excp, loa_excp_refined, nos_excp_refined, loa_excp_original, nos_excp_original = [], [], [], [], [], []
         count = 0
-       #for all plot_stats files
+        mean_train_lowhmm, mean_test_lowhmm, mode_train_lowhmm, mode_test_lowhmm = [], [], [], []
+        traincs_g_testcs = []
+        trainmode_g_testmode = []
+        traincs_l_testcs = []
+        trainmode_l_testmode = []
+        #for all plot_stats files
         for f in filenames:
 
+                iterations += 1
                 accession = f[0:7]
                 loa = find_alignment_length_refined(accession)
                 #varible values for PF00075
@@ -192,16 +203,79 @@ def main():
                     nos_excp_original.append(find_number_of_sequences(accession))
 
                 #hmm_cse, hmm_modes, refined_cse = [], [], []
-                if train_stats['Consensus energy'] > test_stats['Consensus energy']:
+                if train_stats['Consensus energy'] >= test_stats['Consensus energy']:
+                    traincs_g_testcs.append(accession)
                     hmm_cse.append(test_stats['Consensus energy'])
                     hmm_modes.append(test_stats['Mode'])
                     refined_cse.append(train_stats['Consensus energy'])
+                    mean_train_lowhmm.append(train_stats['Mean'])
+                    mean_test_lowhmm.append(test_stats['Mean'])
+                    mode_train_lowhmm.append(train_stats['Mode'])
+                    mode_test_lowhmm.append(test_stats['Mode'])
                 try:
                     normed_consensus_energies.append(train_stats['Consensus energy']/loa)
                     normed_mode_energies.append(train_stats['Mode']/loa)
                 except:
-                    continue
+                    pass
 
+                if train_stats['Consensus energy'] < test_stats['Consensus energy']:
+                    traincs_l_testcs.append(accession)
+                if train_stats['Mode'] < test_stats['Mode']:
+                    trainmode_l_testmode.append(accession)
+                if train_stats['Mode'] >= test_stats['Mode']:
+                    trainmode_g_testmode.append(accession)
+
+
+        #refined cs > hmm cs and refined mode < hmm mode
+        isc_1 = intersection(traincs_g_testcs, trainmode_l_testmode)
+        #refined cs < hmm cs and refined mode > hmm mode
+        isc_2 = intersection(traincs_l_testcs, trainmode_g_testmode)
+        #refined cs < hmm cs and refined mode < hmm mode
+        isc_3 = intersection(traincs_l_testcs, trainmode_l_testmode)
+        #refined cs > hmm cs and refined mode > hmm mode
+        isc_4 = intersection(traincs_g_testcs, trainmode_g_testmode)
+        print(isc_4)
+        print(len(traincs_g_testcs), len(traincs_l_testcs), len(trainmode_g_testmode), len(trainmode_l_testmode))
+        print(len(isc_1), len(isc_2), len(isc_3), len(isc_4))
+
+        print(iterations, 'iterations')
+
+        '''
+        fig = plt.figure()
+        ax = fig.add_axes([0, 0, 1, 1])
+        labels = ['ref cs > hmm cs & ref mode < hmm mode', 'ref cs < hmm cs & ref mode > hmm mode', 'ref cs < hmm cs & ref mode < hmm mode', 'ref cs > hmm cs & ref mode > hmm mode']
+        ax.bar(labels, [len(isc_1), len(isc_2), len(isc_3), len(isc_4)])
+        plt.ylabel('Number of Sequences')
+        plt.xticks(rotation = 90)
+        plt.savefig('cool_plots/intersections_of_deviations.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+        '''
+
+        '''
+        fig = plt.figure()
+        ax = fig.add_axes([0, 0, 1, 1])
+        labels = ['refined cs > hmm cs', 'refined cs < hmm cs', 'refined mode > hmm mode', 'refined mode < hmm mode']
+        ax.bar(labels, [len(traincs_g_testcs), len(traincs_l_testcs), len(trainmode_g_testmode), len(trainmode_l_testmode)])
+        plt.ylabel('Number of Sequences')
+        plt.xticks(rotation = 90)
+        plt.savefig('cool_plots/distribution_of_deviations.png', bbox_inches = 'tight')
+        plt.clf()
+        plt.cla()
+        plt.close()
+
+
+        #for families where refined cs > hmm cs
+        #refined cs vs hmm cs
+        scatter_plot(refined_cse, hmm_cse, 'refined_cs_vs_hmm_cs_lowhmmcsfamilies.png', 'Refined Alignment Consensus Energies', 'HMM Sequences Consensus Energies', True)
+
+        #refined mode vs hmm mode
+        scatter_plot(mode_train_lowhmm, mode_test_lowhmm, 'refined_mode_vs_hmm_mode_lowhmmcsfamilies.png', 'Refined Alignment Mode Energies', 'HMM Sequences Mode Energies', True)
+
+        #refined mean vs hmm mean
+        scatter_plot(mean_train_lowhmm, mean_test_lowhmm, 'refined_mean_vs_hmm_mean_lowhmmcsfamilies.png', 'Refined Alignment Mean Energies', 'HMM Sequences Mean Energies', True)
+    
         #normed consensus energy
         scatter_plot(normed_consensus_energies, normed_mode_energies, 'normed_consensus_energy_vs_mode_energy.png',
                 'Consensus Energy/Length of Alignment', 'Mode Energy/Length of Alignment')
@@ -293,7 +367,7 @@ def main():
         plt.close()
 
         print(names_excp, nums_excp, loa_excp_refined, loa_excp_original, nos_excp_refined, nos_excp_original)
-
+        '''
 
 if __name__ == '__main__':
         main()
