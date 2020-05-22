@@ -69,7 +69,7 @@ def profile_matrix(sequences):
         sequence_length = len(sequences[0]) #length of first sequences (length of all sequences is the same after alignment)
         profile_matrix = {} #profile matrix in dictionary format
         for acid in amino_acids:
-                profile_matrix[acid] = [float(0) for i in range(sequence_length) #initialise all entries in profile matrix to zero
+                profile_matrix[acid] = [float(0) for i in range(sequence_length)] #initialise all entries in profile matrix to zero
 
         for i in range(len(sequences)):
                 seq = sequences[i].upper() #convert sequence to upper case, just in case it isn't
