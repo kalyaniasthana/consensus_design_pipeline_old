@@ -280,7 +280,7 @@ def call_matlab_script():
 def main_pydca(filename, accession_file):
         
         #some file name variables from ugly_strings.py
-        combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, refined_consensus_file, hmm_consensus_file, consensus_file = pydca_strings(filename)
+        combined_file, train_file, test_file, only_refined, only_hmm, dca_energy_plot, refined_consensus_file, hmm_consensus_file, consensus_file, combined_with_consensus = pydca_strings(filename)
         '''
         try:
                 #check if consensus file is missing or empty
@@ -340,19 +340,19 @@ def main_pydca(filename, accession_file):
             f.write(hmm_header)
             f.write(hmm_consensus)
 
-        consensus_seq, consensus_header = fasta_to_list(refined_consensus_file)
-        consensus_seq = consensus_seq[0]
+        #consensus_seq, consensus_header = fasta_to_list(refined_consensus_file)
+        #consensus_seq = consensus_seq[0]
 
-        #option = '2'
-        #realign(option, only_refined, consensus_file, combined_with_consensus) #align both consensus to refined alignment
+        option = '2'
+        realign(option, only_refined, refined_consensus_file, combined_with_consensus) #align both consensus to refined alignment
 
-        #extract refined consensus and hmm consensus from the above realigned file (combined_with_consensus)
-        #for record in SeqIO.parse(combined_with_consensus, 'fasta'):
+        #extract refined consensus from the above realigned file (combined_with_consensus)
+        for record in SeqIO.parse(combined_with_consensus, 'fasta'):
                 #print(record.id)
         #        if record.id == 'consensus-from-hmm-emitted-sequences':
         #                hmm_consensus_aligned = str(record.seq)
-        #        elif record.id == 'consensus-from-refined-alignment':
-        #                consensus_seq_aligned = str(record.seq)
+                 if record.id == 'consensus-from-refined-alignment':
+                        consensus_seq_aligned = str(record.seq)
 
         #consensus_energy = energy_function(consensus_seq_aligned, couplings, fields)
         #hmm_consensus_energy = energy_function(hmm_consensus_aligned, couplings, fields)
@@ -366,7 +366,7 @@ def main_pydca(filename, accession_file):
         #rewrite both consensus in the consensus file in the aligned form
         with open(consensus_file, 'w') as fin:
                 fin.write('>consensus-from-refined-alignment\n')
-                fin.write(consensus_seq + '\n')
+                fin.write(consensus_seq_aligned + '\n')
                 fin.write('>consensus-from-hmm-emitted-sequences\n')
                 fin.write(hmm_consensus)
         #shuffled_sequences = fisher_yates_without_dashes(training_sequences)
@@ -377,7 +377,7 @@ def main_pydca(filename, accession_file):
         #bins_refined = np.linspace(min(sequence_energies_from_training_sequences), max(sequence_energies_from_training_sequences))
         #bins_hmm = np.linspace(min(sequence_energies_from_hmm_alignment), max(sequence_energies_from_hmm_alignment))
         
-        pi = percentage_identity(consensus_seq, hmm_consensus)
+        pi = percentage_identity(consensus_seq_aligned, hmm_consensus)
         print('Percentage Identity of the two consensus sequences: ', pi, '\n')
 
         #plot_energies(sequence_energies_from_training_sequences, sequence_energies_from_hmm_alignment, 

@@ -130,7 +130,7 @@ def remove_dashes(fasta_file_from, fasta_file_to):
                         else:
                                 fout.write(line.translate(str.maketrans('', '', '-')))
 
-#find consensus sequence from sequences in list format
+#find consensus sequence from sequences in list format (with dashes)
 def consensus_sequence(sequences, pm):
         consensus_seq = ''
         #pm = profile_matrix(sequences)
@@ -151,11 +151,36 @@ def consensus_sequence(sequences, pm):
                                 else:
                                     index = l.index(second_largest_value) #get index of amino acid with second largest probability of occurence (after dash)
                         #else:
-                        #        continue #if probability of occurence of dash is greater than 0.5 then skin adding an amino acid at that position
+                        #        continue #if probability of occurence of dash is greater than 0.5 then skip adding an amino acid at that position
 
                 consensus_seq += amino_acids[index] #append amino acid to consensus sequence
 
         return consensus_seq
+
+#find consensus sequence from sequences in list format(without dashes)
+def consensus_sequence_nd(sequences, pm):
+    consensus_seq = ''
+    sequence_length = len(sequences[0])
+    for i in range(sequence_length):
+        l = []
+        for aa in pm:
+            l.append(pm[aa][i])
+        max_value = max(l)
+        indices = get_all_indices(l, max_value)
+        index = indices[0]
+
+        if amino_acids[index] == '-':
+            if l[index] < 0.5:
+                second_largest_value = second_largest(l)
+                if second_largest_value == max_value:
+                    index = indices[1]
+                else:
+                    index = l.index(second_largest_value)
+            else:
+                continue
+        consensus_seq += amino_acids[index]
+
+    return consensus_seq
 
 # returning a list of sequence lengths
 def sequence_length_list(read_file):
@@ -408,7 +433,7 @@ def main(accession, accession_file):
                         break
                     #if there is no break condition
                     pm = profile_matrix(sequences) #profile matrix
-                    cs = consensus_sequence(sequences, pm) #consensus sequence at current iteration
+                    cs = consensus_sequence_nd(sequences, pm) #consensus sequence at current iteration
                     print(cs, len(cs), 'Consensus from refined alignment')
                     bad_sequence_numbers = find_bad_sequences(pm, sequences, name_list) #find bad sequences
                     sequences, name_list = remove_bad_sequences(sequences, name_list, bad_sequence_numbers) #remove bad sequences
@@ -443,8 +468,8 @@ if __name__ == '__main__':
 
         #calling main function for all families in accession_list
         accession_list = ['PF00167', 'PF12079', 'PF05065', 'PF04398', 'PF00902']
-        accession_list = ['PF00902']
-        for i in range(1, 4):
+        #accession_list = ['PF00902']
+        for i in range(4, 7):
             for accession in accession_list: #for each family
                 print('Iterative Alignment ', accession)
                 time.sleep(2)
